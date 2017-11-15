@@ -27,16 +27,21 @@
  *  This project should be completed NLT Wednesday the 6th of december.
  *
  */
+ */
 
 /**
- * Branch Specific Comments:(DELETE THIS BEFORE MERGE)
+ * Branch Specific Comments: (DELETE THESE BEFORE MERGE)
  *
- * This branch of task.c Will be primarily focused on reading the encoder at
- * a rate of 1000Hz (period of 0.001)
+ * This branch of task.c This is the development branch for reading the encoder
+ * and the tachonmeter with the onboard ADC
  *
- * The goal is to have a solitary encoder value in degrees (or in position)
+ * Tasks are:
  *
+ * 1) Read from the tachometer at a rate of 0.001(1000Hz)
+ *
+ * This branch of task.c
  */
+
 #include <xdc/std.h>
 #include <xdc/runtime/Log.h>
 #include <ti/sysbios/BIOS.h>
