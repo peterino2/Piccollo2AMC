@@ -5,8 +5,9 @@
 	<deviceFamily value="C2000"/>
 	<codegenToolVersion value="6.2.0"/>
 	<isElfFormat value="false"/>
-	<connection value="common/targetdb/connections/TIXDS100v3_Dot7_Connection.xml"/>
+	<connection value="common/targetdb/connections/TIXDS100v2_Connection.xml"/>
 	<linkerCommandFile value="TMS320F28027.cmd"/>
 	<rts value="libc.a"/>
 	<templateProperties value="id=com_ti_rtsc_sysbios_example_78.projectspec.task28_TMS320F28027,type=rtsc,products=com.ti.rtsc.SYSBIOS,platform=ti.platforms.tms320x28:$DeviceId$,buildProfile=release,isHybrid=true,configuroOptions=--compileOptions &quot;-g --optimize_with_debug&quot;,"/>
+	<isTargetManual value="false"/>
 </projectOptions>

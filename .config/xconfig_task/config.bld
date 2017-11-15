@@ -19,6 +19,6 @@ if (!(target instanceof xdc.module("xdc.bld.ITarget").Module)) {
 target.ccOpts.prefix = unescape("-g%20--optimize_with_debug%20") + target.ccOpts.prefix;
 
 /* configuro was passed the target's rootDir explicitly */
-target.rootDir = 'C:/ti/ccsv5/tools/compiler/c2000_6.2.0';
+target.rootDir = 'C:/Apps/ti/ccsv7/tools/compiler/c2000_6.2.0';
 
 Build.targets = [target];

@@ -29,19 +29,34 @@
  */
 
 /**
- * Branch Specific Comments:
+ * Branch Specific Comments: (DELETE THESE BEFORE MERGE)
+ *
+ * This branch of task.c This is the development branch for reading the encoder
+ * and the tachonmeter with the onboard ADC
+ *
+ * Tasks are:
+ *
+ * 1) Read from the tachometer at a rate of 0.001(1000Hz)
  *
  * This branch of task.c
  */
+
 #include <xdc/std.h>
 #include <xdc/runtime/Log.h>
 #include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/knl/Task.h>
 #include <ti/sysbios/knl/Semaphore.h>
-
+#include "Library/Devinit.h"
 /* Semaphore handle defined in task.cfg */
 extern const Semaphore_Handle mySem;
 extern const Semaphore_Handle daveSem;
+
+/* Per Encoder Pin definitions*/
+/* Motors are defined as X and Y */
+#define X_ENCA_PIN // J1.3 GPIO
+#define X_ENCB_PIN // J1.4 GPIO
+#define Y_ENCA_PIN // J1.5 GPIO
+#define Y_ENCA_PIN // J1.7 GPIO
 
 /* Counter incremented by Interrupt*/
 volatile UInt tickCount = 0;
@@ -56,7 +71,7 @@ Int main()
      * Print "Hello world" to a log buffer. 
      */
     Log_info0("Hello world\n");
-
+    DeviceInit();
     /* 
      * Start BIOS.
      * Begins task scheduling.
