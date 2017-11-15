@@ -1,23 +1,37 @@
 /* 
- *  28x specific Task example.
+ *  task.c
  *  
- *  This example:
- * 
- *  1) prints "Hello world" in main().
- *  
- *  2) increments a counter within a timer interrupt.
- * 
- *  3) every 10 timer interrupts, the timer interrupt handler
- *     posts a semaphore to awaken a task to perform additional
- *     work. 
- * 
- *  4) prints "10 ticks" from within the task function awakened 
- *     each time 10 interrupts have been serviced.
- * 
- *  All output is routed to a log buffer which can be viewed
- *  using the RTA "Raw Logs" viewer. After loading and running
- *  the application, launch the Tools->RTA->Raw Logs tool to
- *  view the logs.
+ *  Authors: Peter Li, Lulu Li (no relations)
+ *
+ *  This is the entry point and basically the entire dev
+ *  file for the Piccollo2AMC project
+ *
+ *  Objectives of this project are:
+ *
+ *  1) to use the ADC and sample encoder and tachometer values for each of
+ *   the Quanser SRV02 motor that is provided for this course
+ *
+ *  2) To implement a PI control with rate feedback to Control the position of
+ *  each motor
+ *
+ *  3) idunno draw a picture or smth
+ *
+ *  4) Further stretch goals such as:
+ *
+ *      a. Feed forward control
+ *      b. SensorTalk Communications to remotely control the motor
+ *      c. Further stretch goals as we come up with them (i seriously dont think well hit
+ *      this step)
+ *
+ *
+ *  This project should be completed NLT Wednesday the 6th of december.
+ *
+ */
+
+/**
+ * Branch Specific Comments:
+ *
+ * This branch of task.c
  */
 #include <xdc/std.h>
 #include <xdc/runtime/Log.h>
@@ -29,12 +43,13 @@
 extern const Semaphore_Handle mySem;
 extern const Semaphore_Handle daveSem;
 
-/* Counter incremented by timer interrupt */
+/* Counter incremented by Interrupt*/
 volatile UInt tickCount = 0;
 
 /*
  *  ======== main ========
  */
+
 Int main()
 {
     /*
