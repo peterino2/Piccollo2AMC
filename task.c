@@ -67,6 +67,7 @@ Int main()
      * Print "Hello world" to a log buffer. 
      */
     Log_info0("Hello world\n");
+    DeviceInit();
     /* 
      * Start BIOS.
      * Begins task scheduling.
