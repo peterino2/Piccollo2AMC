@@ -27,13 +27,17 @@
  *  This project should be completed NLT Wednesday the 6th of december.
  *
  */
- */
 
-/**
- * Branch Specific Comments: (DELETE THESE BEFORE MERGE)
+ /* Branch Specific Comments: (DELETE THESE BEFORE MERGE)
  *
  * This branch of task.c This is the development branch for reading the encoder
  * and the tachonmeter with the onboard ADC
+ *
+ * tachometer sensitivity for motor in 7720: 1.5mV/rmp
+ *
+ * gear ratio: 14
+ *
+ * 1000mVx(rpm/1.5mV)x(360/rotation)x(1min/60sec)x(1/14)
  *
  * Tasks are:
  *
