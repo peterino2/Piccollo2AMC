@@ -14,9 +14,9 @@ BIOS_DEFS =  -Dti_sysbios_BIOS_swiEnabled__D=FALSE -Dti_sysbios_BIOS_taskEnabled
 
 BIOS_INC  = -I"C:/ti/bios_6_35_04_50/packages/"
 
-CC = C:/ti/ccsv5/tools/compiler/c2000_6.2.0/bin/cl2000 -c $(CCOPTS) -I C:/ti/ccsv5/tools/compiler/c2000_6.2.0/include
-ASM = C:/ti/ccsv5/tools/compiler/c2000_6.2.0/bin/cl2000 -c $(CCOPTS) -I C:/ti/ccsv5/tools/compiler/c2000_6.2.0/include
-AR = C:/ti/ccsv5/tools/compiler/c2000_6.2.0/bin/ar2000 rq
+CC = C:/Apps/ti/ccsv7/tools/compiler/c2000_6.2.0/bin/cl2000 -c $(CCOPTS) -I C:/Apps/ti/ccsv7/tools/compiler/c2000_6.2.0/include
+ASM = C:/Apps/ti/ccsv7/tools/compiler/c2000_6.2.0/bin/cl2000 -c $(CCOPTS) -I C:/Apps/ti/ccsv7/tools/compiler/c2000_6.2.0/include
+AR = C:/Apps/ti/ccsv7/tools/compiler/c2000_6.2.0/bin/ar2000 rq
 
 DEL = cmd.exe /q /c del /f
 CP = cmd.exe /q /c copy /Y

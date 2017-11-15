@@ -11,7 +11,7 @@ var makeAssembly = false;
 var Executable = xdc.module('xdc.bld.Executable');
 
 var exeOpts = new Executable.Attrs({
-        cfgScript: 'C:/ccsv5/task28_TMS320F28027/task.cfg',
+        cfgScript: 'C:/Users/A00885419/Desktop/Piccollo2AMC/Piccollo2AMC/task.cfg',
         profile: 'release',
         cfgHome: 'xconfig_task',
 });
@@ -40,8 +40,8 @@ else {
 }
 
 var thisObj = {
-    cfg:        'C:/ccsv5/task28_TMS320F28027/task.cfg',
-    outputPath: 'C:/ccsv5/task28_TMS320F28027/.config/xconfig_task',
+    cfg:        'C:/Users/A00885419/Desktop/Piccollo2AMC/Piccollo2AMC/task.cfg',
+    outputPath: 'C:/Users/A00885419/Desktop/Piccollo2AMC/Piccollo2AMC/.config/xconfig_task',
     exeName:    'task' + suffix,
     exeIntName: 'task' + suffix.replace('.', '_'),
     targ:       targ,

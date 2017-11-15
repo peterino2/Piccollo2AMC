@@ -7,7 +7,7 @@
         <srcFile name="package/cfg/task_p28L.c"/>
     </sources>
     <configscripts>
-        <srcFile name="C:/ccsv5/task28_TMS320F28027/task.cfg"/>
+        <srcFile name="C:/Users/A00885419/Desktop/Piccollo2AMC/Piccollo2AMC/task.cfg"/>
     </configscripts>
     <makefiles>
         <srcFile name="package.mak" src="package.bld"/>
@@ -25,7 +25,7 @@
             platform="ti.platforms.sim28xx"
             isa="28"
             suffix="28L"
-            rootDir="C:/ti/ccsv5/tools/compiler/c2000_6.2.0"
+            rootDir="C:/Apps/ti/ccsv7/tools/compiler/c2000_6.2.0"
             os="undefined"
             rts="ti.targets.rts2800">
             <model endian="little"
@@ -44,7 +44,7 @@
         isPartial="false"
         xCfgScript="package/cfg/task_p28L.cfg"
         xCfgPrefix="package/cfg/task_p28L"
-        cfgScript="C:/ccsv5/task28_TMS320F28027/task.cfg"
+        cfgScript="C:/Users/A00885419/Desktop/Piccollo2AMC/Piccollo2AMC/task.cfg"
         cfgArgs="null"
         />
     </configurations>
@@ -56,7 +56,7 @@
         profile="release"
         xCfgScript="package/cfg/task_p28L.cfg"
         xCfgPrefix="package/cfg/task_p28L"
-        cfgScript="C:/ccsv5/task28_TMS320F28027/task.cfg"
+        cfgScript="C:/Users/A00885419/Desktop/Piccollo2AMC/Piccollo2AMC/task.cfg"
         cfgArgs="null"
         />
     </executables>
