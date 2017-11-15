@@ -4,3 +4,5 @@ Debug/
 *.obj
 
 src/sysbios/sysbios\.a28L
+
+src/
