@@ -29,14 +29,18 @@
  */
 
 /**
- * Branch Specific Comments:(DELETE THIS BEFORE MERGE)
+ * Branch Specific Comments: (DELETE THESE BEFORE MERGE)
  *
- * This branch of task.c Will be primarily focused on reading the encoder at
- * a rate of 1000Hz (period of 0.001)
+ * This branch of task.c This is the development branch for reading the encoder
  *
- * The goal is to have a solitary encoder value in degrees (or in position)
+ * Tasks are:
+ *
+ * 1) To read from the 4 defined GPIOS to develop the system to read 2 pairs of 2 ch
+ * encoders
+ *
  *
  */
+
 #include <xdc/std.h>
 #include <xdc/runtime/Log.h>
 #include <ti/sysbios/BIOS.h>
