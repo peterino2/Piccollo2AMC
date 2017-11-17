@@ -11,6 +11,7 @@
 //
 // Modified by: DNR 14May2012 for use with SYS/BIOS
 //
+//
 //============================================================================
 //============================================================================
 
@@ -46,7 +47,7 @@ void DeviceInit(void)
    //------------------------------------------------
    SysCtrlRegs.PCLKCR0.bit.SPIAENCLK = 0;	// SPI-A
    //------------------------------------------------
-   SysCtrlRegs.PCLKCR0.bit.SCIAENCLK = 1;  	// SCI-A
+   SysCtrlRegs.PCLKCR0.bit.SCIAENCLK = 0;  	// SCI-A
    //------------------------------------------------
    SysCtrlRegs.PCLKCR1.bit.ECAP1ENCLK = 0;	//eCAP1
    //------------------------------------------------
@@ -161,14 +162,14 @@ void DeviceInit(void)
 //  GPIO-20 - GPIO-27 Do Not Exist
 //--------------------------------------------------------------------------------------
 //  GPIO-28 - PIN FUNCTION = --Spare--
-	GpioCtrlRegs.GPAMUX2.bit.GPIO28 = 1;	// 0=GPIO,  1=SCIRX-A,  2=I2C-SDA,  3=TZ2
-//	GpioCtrlRegs.GPADIR.bit.GPIO28 = 0;		// 1=OUTput,  0=INput 
+	GpioCtrlRegs.GPAMUX2.bit.GPIO28 = 0;	// 0=GPIO,  1=SCIRX-A,  2=I2C-SDA,  3=TZ2
+	GpioCtrlRegs.GPADIR.bit.GPIO28 = 0;		// 1=OUTput,  0=INput
 //	GpioDataRegs.GPACLEAR.bit.GPIO28 = 1;	// uncomment if --> Set Low initially
 //	GpioDataRegs.GPASET.bit.GPIO28 = 1;		// uncomment if --> Set High initially
 //--------------------------------------------------------------------------------------
 //  GPIO-29 - PIN FUNCTION = --Spare--
-	GpioCtrlRegs.GPAMUX2.bit.GPIO29 = 1;	// 0=GPIO,  1=SCITXD-A,  2=I2C-SCL,  3=TZ3
-//	GpioCtrlRegs.GPADIR.bit.GPIO29 = 0;		// 1=OUTput,  0=INput 
+	GpioCtrlRegs.GPAMUX2.bit.GPIO29 = 0;	// 0=GPIO,  1=SCITXD-A,  2=I2C-SCL,  3=TZ3
+	GpioCtrlRegs.GPADIR.bit.GPIO29 = 0;		// 1=OUTput,  0=INput
 //	GpioDataRegs.GPACLEAR.bit.GPIO29 = 1;	// uncomment if --> Set Low initially
 //	GpioDataRegs.GPASET.bit.GPIO29 = 1;		// uncomment if --> Set High initially
 //--------------------------------------------------------------------------------------
@@ -194,6 +195,18 @@ void DeviceInit(void)
 //	GpioDataRegs.GPBCLEAR.bit.GPIO34 = 1;	// uncomment if --> Set Low initially
 	GpioDataRegs.GPBSET.bit.GPIO34 = 1;		// uncomment if --> Set High initially
 //--------------------------------------------------------------------------------------
+
+	/* Enable the interrupt vectors 35 and 36 for GPIO
+	 * Uses Encoder channel A as the trigger
+	 *
+	 * xEnc on xint1 and yEnc on xint2
+	 * */
+	XIntruptRegs.XINT1CR.bit.ENABLE = 1;
+	XIntruptRegs.XINT2CR.bit.ENABLE = 1;
+	GpioIntRegs.GPIOXINT1SEL = 28;
+	GpioIntRegs.GPIOXINT2SEL = 18;
+
+
 	EDIS;	// Disable register access
 }
 

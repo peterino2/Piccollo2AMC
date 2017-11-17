@@ -32,13 +32,13 @@
  * Branch Specific Comments: (DELETE THESE BEFORE MERGE)
  *
  * This branch of task.c This is the development branch for reading the encoder
- * and the tachonmeter with the onboard ADC
  *
  * Tasks are:
  *
- * 1) Read from the tachometer at a rate of 0.001(1000Hz)
+ * 1) To read from the 4 defined GPIOS to develop the system to read 2 pairs of 2 ch
+ * encoders
  *
- * This branch of task.c
+ *
  */
 
 #include <xdc/std.h>
@@ -47,16 +47,17 @@
 #include <ti/sysbios/knl/Task.h>
 #include <ti/sysbios/knl/Semaphore.h>
 #include "Library/Devinit.h"
+#include "Library/DSP2802x_Device.h"
 /* Semaphore handle defined in task.cfg */
 extern const Semaphore_Handle mySem;
 extern const Semaphore_Handle daveSem;
 
-/* Per Encoder Pin definitions*/
-/* Motors are defined as X and Y */
-#define X_ENCA_PIN // J1.3 GPIO
-#define X_ENCB_PIN // J1.4 GPIO
-#define Y_ENCA_PIN // J1.5 GPIO
-#define Y_ENCA_PIN // J1.7 GPIO
+/* Per Encoder Pin definitions for Motors X and Y*/
+#define X_ENCA_DATA GpioDataRegs.GPADAT.bit.GPIO28 // J1.3 ---> (GPADAT.all >> 28) & 0x3 // Grab bits 28 and 29
+#define X_ENCB_DATA GpioDataRegs.GPADAT.bit.GPIO29 // J1.4
+
+#define Y_ENCA_DATA GpioDataRegs.GPADAT.bit.GPIO0  // J6.1 GPB&0x3
+#define Y_ENCB_DATA GpioDataRegs.GPADAT.bit.GPIO1  // J6.2
 
 /* Counter incremented by Interrupt*/
 volatile UInt tickCount = 0;
@@ -76,63 +77,91 @@ Int main()
      * Start BIOS.
      * Begins task scheduling.
      */
-    BIOS_start();    /* does not return */
-    return(0);
+    BIOS_start(); /* does not return */
+    return (0);
 }
 
 /*
- *  ======== myTickFxn ========
- *  Timer ISR function that posts a Swi to perform 
- *  the non-realtime service functions.
+ *  ======== Encoder interrupt functions ========
  */
-Void myTickFxn(UArg arg) 
-{
-    tickCount += 1;    /* increment the counter */
 
-    /* every 10 timer interrupts post the semaphore */
-    if ((tickCount % 10) == 0) {
-        Semaphore_post(mySem);
-    }
+/* Encoder multiplexing
+ *
+ * L A B  R
+ * 0 0 0 +1
+ * 0 0 1 -1
+ * 0 1 0 -1
+ * 0 1 1 +1
+ * 1      1
+ * 1      0
+ * 1      0
+ * 1      1
+ * -1      0
+ * -1     -1
+ * -1     -1
+ * -1      0
+ *
+ * Encode -1 as 0 and +1 as 1 and 0 as b1x\
+ *
+ * encDirections is a lookup table that tells you which direction
+ * the encoder is moving
+ * */
+const int16_t encDirections[16] = {
+// If previous movement was negative
+        0, -1, -1, 0,
+        // If previous movement was positive
+        1, 0, 0, 1,
+        // If previous movement was neither
+        1, -1, -1, 1, 1, -1, -1, 1
+};
+/* This constructs the indices for the lookup table
+ * */
+const int16_t encDirCodes[3] = { 0, 8, 4 };
+
+volatile static uint32_t xPosition = 0;
+Void xEncISR(Void)
+{
+    static int previous = 8;
+    uint16_t delta;
+    delta = [previous|( GpioDataRegs.GPADAT.all >> 28 ) & 0x3];
+    previous = encDirCodes[ delta + 1 ];
+    xPosition += delta;
 }
+
+Void yEncISR(Void)
+{
+
+}
+
+/* Encoder interrupt Function */
 
 /*
- *  ======== myTaskFxn ========
- *  Task function that pends on a semaphore until 10 ticks have
- *  expired.
+ *  ======== Feedback Control Function ========
+ * Process the implemented PID control loop
  */
-Void myTaskFxn(Void) 
+Void FeedbackControlFxn(Void)
 {
-	int i = 3;
-    /*
-     * Do this forever
-     */
-    while (TRUE) {
-        /* 
-         * Pend on "mySemaphore" until the timer ISR says 
-         * its time to do something.
-         */ 
-        Semaphore_pend(mySem, BIOS_WAIT_FOREVER);
-        /*
-         * Print the current value of tickCount to a log buffer. 
-         */
-        if(--i == 0){
-        	Semaphore_post(daveSem);
-        	Log_info1("10 ticks. Tick Count = %d\n", tickCount);
-        }
-    }
+// kD is not availalbe yet
+
+int32_t kd; // Rate feedback gain Not used in PI control
+int32_t kp; // Proportional gain
+int32_t ki; // integral gain
+
+/*
+ * Do this forever
+ */
+while (1)
+{
+}
 }
 
-
-Void daveTaskFxn(void){
-    /*
-     * Pend on "mySemaphore" until the timer ISR says
-     * its time to do something.
-     */
-	while(1){
-		Semaphore_pend(daveSem, BIOS_WAIT_FOREVER);
-		/*
-		 * Print the current value of tickCount to a log buffer.
-		 */
-		Log_info1("DAVES HERE! 10 ticks. Tick Count = %d\n", tickCount);
-	}
+Void Idle(void)
+{
+/*
+ * Pend on "mySemaphore" until the timer ISR says
+ * its time to do something.
+ */
+while (1)
+{
+}
 }
