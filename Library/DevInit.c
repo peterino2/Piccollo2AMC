@@ -18,6 +18,7 @@
 #include "DSP2802x_Device.h"
 
 void DeviceInit(void);
+extern void DelayUs(Uint16);
 
 //--------------------------------------------------------------------
 //  Configure Device for target Application Here
@@ -38,14 +39,14 @@ void DeviceInit(void)
 // Note: not all peripherals are available on all 280x derivates.
 // Refer to the datasheet for your particular device. 
 
-   SysCtrlRegs.PCLKCR0.bit.ADCENCLK = 0;    // ADC
+   SysCtrlRegs.PCLKCR0.bit.ADCENCLK = 1;    // ADC
    //------------------------------------------------
    SysCtrlRegs.PCLKCR3.bit.COMP1ENCLK = 0;	// COMP1
    SysCtrlRegs.PCLKCR3.bit.COMP2ENCLK = 0;	// COMP2
    //------------------------------------------------
    SysCtrlRegs.PCLKCR0.bit.I2CAENCLK = 0;   // I2C
    //------------------------------------------------
-   SysCtrlRegs.PCLKCR0.bit.SPIAENCLK = 0;	// SPI-A
+   SysCtrlRegs.PCLKCR0.bit.SPIAENCLK = 1;	// SPI-A
    //------------------------------------------------
    SysCtrlRegs.PCLKCR0.bit.SCIAENCLK = 0;  	// SCI-A
    //------------------------------------------------
@@ -201,10 +202,31 @@ void DeviceInit(void)
 	 *
 	 * xEnc on xint1 and yEnc on xint2
 	 * */
-	XIntruptRegs.XINT1CR.bit.ENABLE = 1;
-	XIntruptRegs.XINT2CR.bit.ENABLE = 1;
-	GpioIntRegs.GPIOXINT1SEL = 28;
-	GpioIntRegs.GPIOXINT2SEL = 18;
+	//XIntruptRegs.XINT1CR.bit.ENABLE = 1;
+	//XIntruptRegs.XINT2CR.bit.ENABLE = 1;
+	GpioIntRegs.GPIOXINT1SEL.bit.GPIOSEL = 28;
+	GpioIntRegs.GPIOXINT2SEL.bit.GPIOSEL = 18;
+
+
+	AdcRegs.ADCCTL1.bit.ADCPWDN = 1;
+	AdcRegs.ADCCTL1.bit.ADCREFPWD = 1;
+	AdcRegs.ADCCTL1.bit.ADCREFSEL = 0;
+	AdcRegs.ADCCTL1.bit.INTPULSEPOS = 1;
+    AdcRegs.ADCCTL1.bit.ADCENABLE = 1;
+
+    DelayUs(1000);
+
+	AdcRegs.ADCSOC0CTL.bit.ACQPS = 6;
+	AdcRegs.ADCSOC0CTL.bit.CHSEL = 0;
+	AdcRegs.ADCSOC1CTL.bit.ACQPS = 6;
+    AdcRegs.ADCSOC1CTL.bit.CHSEL = 1;
+
+    AdcRegs.INTSEL1N2.bit.INT1SEL = 0;
+    AdcRegs.INTSEL1N2.bit.INT2SEL = 1;
+
+    AdcRegs.INTSEL1N2.bit.INT2E = 1;
+    AdcRegs.INTSEL1N2.bit.INT1E = 1;
+
 
 
 	EDIS;	// Disable register access

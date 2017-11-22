@@ -119,7 +119,10 @@ Void yEncISR(Void)
 {
 
 }
-
+Void timerISR(Void){
+    AdcRegs.ADCSOCFRC1.bit.SOC0 = 1;
+    AdcRegs.ADCSOCFRC1.bit.SOC1 = 1;
+}
 
 /*
  *  ======== Feedback Control Function ========
@@ -132,21 +135,26 @@ Void FeedbackControlFxn(Void)
     int32_t kp; // Proportional gain
     int32_t ki; // integral gain
 
+    Log_info0("Program started");
     while (1)
     {
     }
 }
 
 Void xVelISR (Void){
-
+    AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
+    xVel = AdcResult.ADCRESULT0;
 }
-Void yVelISR(Void){
 
+Void yVelISR(Void){
+    AdcRegs.ADCINTFLGCLR.bit.ADCINT2 = 1;
+    yVel = AdcResult.ADCRESULT1;
 }
 
 Void Idle(void)
 {
     while (1)
     {
+
     }
 }
