@@ -54,26 +54,31 @@
 #include "Library/Devinit.h"
 #include "Library/DSP2802x_Device.h"
 
-extern const Semaphore_Handle mySem;
-extern const Semaphore_Handle daveSem;
+
+// one Feedback Control loop has to complete within this many cycles
+// 80 000 cycles is 0.001 seconds
+#define CPU_CYCLES_PER_TICK 80000
+
+extern const Semaphore_Handle xDataAvailable = 0;
+extern const Semaphore_Handle yDataAvailable = 0;
 
 
 // Updated by encoderISR triggers at any time on rising and falling edge
 // Highest priority
-volatile static uint32_t xPos;
-volatile static uint32_t yPos;
+volatile static int32_t xPos;
+volatile static int32_t yPos;
 
 // updated by ADC SWI
-volatile static uint32_t xVel;
-volatile static uint32_t yVel;
+volatile static int32_t xVel;
+volatile static int32_t yVel;
 
-// updated every 0.001s by feedback swi
-volatile static uint32_t xVoltage;
-volatile static uint32_t yVoltage;
+// updated every CPU_CYCLES_PER_TICK by feedback
+volatile static int32_t xVoltage;
+volatile static int32_t yVoltage;
 
 // Updated whenever the draw task needs to
-volatile static uint32_t xPosRef;
-volatile static uint32_t yPosRef;
+volatile static int32_t xPosRef;
+volatile static int32_t yPosRef;
 
 /* Counter incremented by Interrupt*/
 volatile UInt tickCount = 0;
@@ -102,9 +107,12 @@ const int16_t encDeltas[16] = {
         // If previous movement was positive
         1, 0, 0, 1,
         // If previous movement was neither
-        1, -1, -1, 1, 1, -1, -1, 1 };
+        1, -1, -1, 1, 1, -1, -1, 1
+};
 
 /* Backward, Stop, Forward*/
+// Pins assigned for xMotor are:
+// J
 const int16_t encDirCodes[3] = { 0, 8, 4 };
 Void xEncISR(Void)
 {
@@ -115,40 +123,67 @@ Void xEncISR(Void)
     xPos += delta;
 }
 
+// Pins assigned for yMotor are:
+// J6.1 = A and J6.2 = B
 Void yEncISR(Void)
 {
-
+    static int previous = 8;
+    uint16_t delta;
+    delta = encDeltas[previous|( GpioDataRegs.GPADAT.all ) & 0x3];
+    previous = encDirCodes[delta + 1];
+    yPos += delta;
 }
+
 Void timerISR(Void){
     AdcRegs.ADCSOCFRC1.all = 0x3;
 }
+
+Void xVelISR (Void){
+    AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
+    xVel = AdcResult.ADCRESULT0;
+    Semaphore_post(xDataAvailable);
+}
+
+Void yVelISR(Void){
+    AdcRegs.ADCINTFLGCLR.bit.ADCINT2 = 1;
+    yVel = AdcResult.ADCRESULT1;
+    Semaphore_post(yDataAvailable);
+}
+
 
 /*
  *  ======== Feedback Control Function ========
  * Process the implemented PID control loop SWI
  * triggers once every 0.001s
  */
-Void FeedbackControlFxn(Void)
+#define X_KD 1
+#define X_KP 1
+#define X_KI 1
+Void xFeedbackControlFxn(Void)
 {
-    int32_t kd; // Rate feedback gain Not used in PI control
-    int32_t kp; // Proportional gain
-    int32_t ki; // integral gain
-
-    Log_info0("Program started");
+    static int32_t integral;
     while (1)
     {
+        //Semaphore_pend(xDataAvailable);
+        // Process for xVoltage
     }
 }
 
-Void xVelISR (Void){
-    AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
-    xVel = AdcResult.ADCRESULT0;
+#define Y_KD 1
+#define Y_KP 1
+#define Y_KI 1
+
+Void yFeedbackControlFxn(Void)
+{
+    static int32_t integral;
+    while (1)
+    {
+        //Semaphore_pend(yDataAvailable);
+        // Process for yVoltage
+
+    }
 }
 
-Void yVelISR(Void){
-    AdcRegs.ADCINTFLGCLR.bit.ADCINT2 = 1;
-    yVel = AdcResult.ADCRESULT1;
-}
 
 Void Idle(void)
 {

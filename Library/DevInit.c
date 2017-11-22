@@ -197,15 +197,15 @@ void DeviceInit(void)
 	GpioDataRegs.GPBSET.bit.GPIO34 = 1;		// uncomment if --> Set High initially
 //--------------------------------------------------------------------------------------
 
-	/* Enable the interrupt vectors 35 and 36 for GPIO
+	/*
 	 * Uses Encoder channel A as the trigger
 	 *
 	 * xEnc on xint1 and yEnc on xint2
 	 * */
-	//XIntruptRegs.XINT1CR.bit.ENABLE = 1;
-	//XIntruptRegs.XINT2CR.bit.ENABLE = 1;
-	GpioIntRegs.GPIOXINT1SEL.bit.GPIOSEL = 28;
-	GpioIntRegs.GPIOXINT2SEL.bit.GPIOSEL = 18;
+	XIntruptRegs.XINT1CR.bit.ENABLE = 1;
+	XIntruptRegs.XINT2CR.bit.ENABLE = 1;
+	GpioIntRegs.GPIOXINT1SEL.bit.GPIOSEL = 28; // X motor encoder interrupt
+	GpioIntRegs.GPIOXINT2SEL.bit.GPIOSEL = 0; // Y motor encoder interrupt
 
 
 	AdcRegs.ADCCTL1.bit.ADCPWDN = 1;
@@ -226,6 +226,8 @@ void DeviceInit(void)
     AdcRegs.INTSEL1N2.bit.INT2E = 1;
     AdcRegs.INTSEL1N2.bit.INT1E = 1;
 
+    PieCtrlRegs.PIEIER1.bit.INTx4 = 1;
+    PieCtrlRegs.PIECTRL.bit.ENPIE = 1;
 
 
 	EDIS;	// Disable register access
