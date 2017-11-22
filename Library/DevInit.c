@@ -210,21 +210,20 @@ void DeviceInit(void)
 
 	AdcRegs.ADCCTL1.bit.ADCPWDN = 1;
 	AdcRegs.ADCCTL1.bit.ADCREFPWD = 1;
-	AdcRegs.ADCCTL1.bit.ADCREFSEL = 0;
+	AdcRegs.ADCCTL1.bit.ADCBGPWD = 1;
 	AdcRegs.ADCCTL1.bit.INTPULSEPOS = 1;
     AdcRegs.ADCCTL1.bit.ADCENABLE = 1;
 
     DelayUs(1000);
+	AdcRegs.ADCSOC0CTL.bit.ACQPS = 0x6;
+	AdcRegs.ADCSOC0CTL.bit.CHSEL = 0xE;
+	AdcRegs.ADCSOC1CTL.bit.ACQPS = 0x6;
+    AdcRegs.ADCSOC1CTL.bit.CHSEL = 0xE;
 
-	AdcRegs.ADCSOC0CTL.bit.ACQPS = 6;
-	AdcRegs.ADCSOC0CTL.bit.CHSEL = 0;
-	AdcRegs.ADCSOC1CTL.bit.ACQPS = 6;
-    AdcRegs.ADCSOC1CTL.bit.CHSEL = 1;
+    AdcRegs.INTSEL1N2.bit.INT1SEL = 1;
+    //AdcRegs.INTSEL1N2.bit.INT2SEL = 1;
 
-    AdcRegs.INTSEL1N2.bit.INT1SEL = 0;
-    AdcRegs.INTSEL1N2.bit.INT2SEL = 1;
-
-    AdcRegs.INTSEL1N2.bit.INT2E = 1;
+    //AdcRegs.INTSEL1N2.bit.INT2E = 1;
     AdcRegs.INTSEL1N2.bit.INT1E = 1;
 
 

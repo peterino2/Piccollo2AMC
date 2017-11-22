@@ -120,8 +120,7 @@ Void yEncISR(Void)
 
 }
 Void timerISR(Void){
-    AdcRegs.ADCSOCFRC1.bit.SOC0 = 1;
-    AdcRegs.ADCSOCFRC1.bit.SOC1 = 1;
+    AdcRegs.ADCSOCFRC1.all = 0x3;
 }
 
 /*
@@ -143,7 +142,7 @@ Void FeedbackControlFxn(Void)
 
 Void xVelISR (Void){
     AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
-    xVel = AdcResult.ADCRESULT0;
+    xVel = AdcResult.ADCRESULT1;
 }
 
 Void yVelISR(Void){
