@@ -216,14 +216,14 @@ void DeviceInit(void)
 
     DelayUs(1000);
 	AdcRegs.ADCSOC0CTL.bit.ACQPS = 0x6;
-	AdcRegs.ADCSOC0CTL.bit.CHSEL = 0xE;
+	AdcRegs.ADCSOC0CTL.bit.CHSEL = 0x0;
 	AdcRegs.ADCSOC1CTL.bit.ACQPS = 0x6;
-    AdcRegs.ADCSOC1CTL.bit.CHSEL = 0xE;
+    AdcRegs.ADCSOC1CTL.bit.CHSEL = 0x1;
 
     AdcRegs.INTSEL1N2.bit.INT1SEL = 1;
-    //AdcRegs.INTSEL1N2.bit.INT2SEL = 1;
+    AdcRegs.INTSEL1N2.bit.INT2SEL = 1;
 
-    //AdcRegs.INTSEL1N2.bit.INT2E = 1;
+    AdcRegs.INTSEL1N2.bit.INT2E = 1;
     AdcRegs.INTSEL1N2.bit.INT1E = 1;
 
 

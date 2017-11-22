@@ -142,7 +142,7 @@ Void FeedbackControlFxn(Void)
 
 Void xVelISR (Void){
     AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
-    xVel = AdcResult.ADCRESULT1;
+    xVel = AdcResult.ADCRESULT0;
 }
 
 Void yVelISR(Void){
