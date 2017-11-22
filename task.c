@@ -48,16 +48,27 @@
 #include <ti/sysbios/knl/Semaphore.h>
 #include "Library/Devinit.h"
 #include "Library/DSP2802x_Device.h"
-/* Semaphore handle defined in task.cfg */
+
 extern const Semaphore_Handle mySem;
 extern const Semaphore_Handle daveSem;
 
-/* Per Encoder Pin definitions for Motors X and Y*/
-#define X_ENCA_DATA GpioDataRegs.GPADAT.bit.GPIO28 // J1.3 ---> (GPADAT.all >> 28) & 0x3 // Grab bits 28 and 29
-#define X_ENCB_DATA GpioDataRegs.GPADAT.bit.GPIO29 // J1.4
 
-#define Y_ENCA_DATA GpioDataRegs.GPADAT.bit.GPIO0  // J6.1 GPB&0x3
-#define Y_ENCB_DATA GpioDataRegs.GPADAT.bit.GPIO1  // J6.2
+// Updated by encoderISR triggers at any time on rising and falling edge
+// Highest priority
+volatile static uint32_t xPos;
+volatile static uint32_t yPos;
+
+// updated by ADC SWI
+volatile static uint32_t xVel;
+volatile static uint32_t yVel;
+
+// updated every 0.001s by feedback swi
+volatile static uint32_t xVoltage;
+volatile static uint32_t yVoltage;
+
+// Updated whenever the draw task needs to
+volatile static uint32_t xPosRef;
+volatile static uint32_t yPosRef;
 
 /* Counter incremented by Interrupt*/
 volatile UInt tickCount = 0;
@@ -68,64 +79,35 @@ volatile UInt tickCount = 0;
 
 Int main()
 {
-    /*
-     * Print "Hello world" to a log buffer. 
-     */
-    Log_info0("Hello world\n");
+    // Sample: Log_info0("Hello world\n");
     DeviceInit();
-    /* 
-     * Start BIOS.
-     * Begins task scheduling.
-     */
+
     BIOS_start(); /* does not return */
     return (0);
 }
 
-/*
- *  ======== Encoder interrupt functions ========
- */
 
-/* Encoder multiplexing
- *
- * L A B  R
- * 0 0 0 +1
- * 0 0 1 -1
- * 0 1 0 -1
- * 0 1 1 +1
- * 1      1
- * 1      0
- * 1      0
- * 1      1
- * -1      0
- * -1     -1
- * -1     -1
- * -1      0
- *
- * Encode -1 as 0 and +1 as 1 and 0 as b1x\
- *
+/*
  * encDirections is a lookup table that tells you which direction
  * the encoder is moving
  * */
-const int16_t encDirections[16] = {
-// If previous movement was negative
+const int16_t encDeltas[16] = {
+        // If previous movement was negative
         0, -1, -1, 0,
         // If previous movement was positive
         1, 0, 0, 1,
         // If previous movement was neither
-        1, -1, -1, 1, 1, -1, -1, 1
-};
-/* This constructs the indices for the lookup table
- * */
-const int16_t encDirCodes[3] = { 0, 8, 4 };
+        1, -1, -1, 1, 1, -1, -1, 1 };
 
-volatile static uint32_t xPosition = 0;
+/* Backward, Stop, Forward*/
+const int16_t encDirCodes[3] = { 0, 8, 4 };
 Void xEncISR(Void)
 {
     static int previous = 8;
     uint16_t delta;
-    delta = [previous|( GpioDataRegs.GPADAT.all >> 28 ) & 0x3];
-    previous = encDirCodes[ delta + 1 ];
-    xPosition += delta;
+    delta = encDeltas[previous|( GpioDataRegs.GPADAT.all >> 28 ) & 0x3];
+    previous = encDirCodes[delta + 1];
+    xPos += delta;
 }
 
 Void yEncISR(Void)
@@ -133,35 +115,33 @@ Void yEncISR(Void)
 
 }
 
-/* Encoder interrupt Function */
 
 /*
  *  ======== Feedback Control Function ========
- * Process the implemented PID control loop
+ * Process the implemented PID control loop SWI
+ * triggers once every 0.001s
  */
 Void FeedbackControlFxn(Void)
 {
-// kD is not availalbe yet
+    int32_t kd; // Rate feedback gain Not used in PI control
+    int32_t kp; // Proportional gain
+    int32_t ki; // integral gain
 
-int32_t kd; // Rate feedback gain Not used in PI control
-int32_t kp; // Proportional gain
-int32_t ki; // integral gain
-
-/*
- * Do this forever
- */
-while (1)
-{
+    while (1)
+    {
+    }
 }
+
+Void xVelISR (Void){
+
+}
+Void yVelISR(Void){
+
 }
 
 Void Idle(void)
 {
-/*
- * Pend on "mySemaphore" until the timer ISR says
- * its time to do something.
- */
-while (1)
-{
-}
+    while (1)
+    {
+    }
 }
