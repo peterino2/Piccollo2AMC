@@ -65,20 +65,20 @@ extern const Semaphore_Handle yDataAvailable = 0;
 
 // Updated by encoderISR triggers at any time on rising and falling edge
 // Highest priority
-volatile static int32_t xPos;
-volatile static int32_t yPos;
+volatile static int16_t xPos = 0;
+volatile static int16_t yPos = 0;
 
 // updated by ADC SWI
-volatile static int32_t xVel;
-volatile static int32_t yVel;
+volatile static int16_t xVel = 0;
+volatile static int16_t yVel = 0;
 
 // updated every CPU_CYCLES_PER_TICK by feedback
-volatile static int32_t xVoltage;
-volatile static int32_t yVoltage;
+volatile static int16_t xVoltage = 0;
+volatile static int16_t yVoltage = 0;
 
 // Updated whenever the draw task needs to
-volatile static int32_t xPosRef;
-volatile static int32_t yPosRef;
+volatile static int16_t xPosRef = 0;
+volatile static int16_t yPosRef = 0;
 
 /* Counter incremented by Interrupt*/
 volatile UInt tickCount = 0;
@@ -111,20 +111,26 @@ const int16_t encDeltas[16] = {
 };
 
 /* Backward, Stop, Forward*/
-// Pins assigned for xMotor are:
-// J
-const int16_t encDirCodes[3] = { 0, 8, 4 };
+const uint16_t encDirCodes[3] = { 0, 8, 4 };
+
+#define BACKWARD 0
+#define STOP 1
+#define FORWARD 2
+
+
 Void xEncISR(Void)
 {
-    static int previous = 8;
-    uint16_t delta;
-    delta = encDeltas[previous|( GpioDataRegs.GPADAT.all >> 28 ) & 0x3];
+    static uint16_t previous = 8;
+    int16_t delta, mask;
+    DelayUs(1000);
+    mask = ( (GpioDataRegs.GPADAT.bit.GPIO18 << 1) | GpioDataRegs.GPADAT.bit.GPIO29) & 0x3;
+    delta = encDeltas[previous|mask];
     previous = encDirCodes[delta + 1];
     xPos += delta;
 }
 
 // Pins assigned for yMotor are:
-// J6.1 = A and J6.2 = B
+// J6.1 = A and J6.2 = Bn
 Void yEncISR(Void)
 {
     static int previous = 8;
@@ -141,13 +147,13 @@ Void timerISR(Void){
 Void xVelISR (Void){
     AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
     xVel = AdcResult.ADCRESULT0;
-    Semaphore_post(xDataAvailable);
+//    Semaphore_post(xDataAvailable);
 }
 
 Void yVelISR(Void){
     AdcRegs.ADCINTFLGCLR.bit.ADCINT2 = 1;
     yVel = AdcResult.ADCRESULT1;
-    Semaphore_post(yDataAvailable);
+//    Semaphore_post(yDataAvailable);
 }
 
 
@@ -161,7 +167,7 @@ Void yVelISR(Void){
 #define X_KI 1
 Void xFeedbackControlFxn(Void)
 {
-    static int32_t integral;
+    static int16_t integral;
     while (1)
     {
         //Semaphore_pend(xDataAvailable);
@@ -175,7 +181,7 @@ Void xFeedbackControlFxn(Void)
 
 Void yFeedbackControlFxn(Void)
 {
-    static int32_t integral;
+    static int16_t integral;
     while (1)
     {
         //Semaphore_pend(yDataAvailable);
