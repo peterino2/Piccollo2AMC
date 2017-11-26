@@ -97,41 +97,25 @@ Int main()
 }
 
 
-/*
- * encDirections is a lookup table that tells you which direction
- * the encoder is moving
- * */
-const int16_t encDeltas[16] = {
-        // If previous movement was negative
-        0, -1, -1, 0,
-        // If previous movement was positive
-        1, 0, 0, 1,
-        // If previous movement was neither
-        1, -1, -1, 1, 1, -1, -1, 1
-};
-
 /* Backward, Stop, Forward*/
 // Pins assigned for xMotor are:
 // J
-const int16_t encDirCodes[3] = { 0, 8, 4 };
+
+int16_t directions[] = {1, -1, -1, 1};
+
 Void xEncISR(Void)
 {
-    static int previous = 8;
-    uint16_t delta;
-    delta = encDeltas[previous|( GpioDataRegs.GPADAT.all >> 28 ) & 0x3];
-    previous = encDirCodes[delta + 1];
-    xPos += delta;
+    uint16_t mask;
+    // motor pins on 18 and 29
+    mask = (GpioDataRegs.GPADAT.bit.GPIO18 << 1) + GpioDataRegs.GPADAT.bit.GPIO29;
+    mask = (GpioDataRegs.GPADAT.bit.GPIO18 << 1) + GpioDataRegs.GPADAT.bit.GPIO29;
+    xPos += directions[mask];
 }
 
 // Pins assigned for yMotor are:
 // J6.1 = A and J6.2 = B
 Void yEncISR(Void)
 {
-    static int previous = 8;
-    uint16_t delta;
-    delta = encDeltas[previous|( GpioDataRegs.GPADAT.all ) & 0x3];
-    previous = encDirCodes[delta + 1];
-    yPos += delta;
 }
 
 Void timerISR(Void){

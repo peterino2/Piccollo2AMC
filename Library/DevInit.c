@@ -204,7 +204,7 @@ void DeviceInit(void)
 	 * */
 	XIntruptRegs.XINT1CR.bit.ENABLE = 1;
 	XIntruptRegs.XINT2CR.bit.ENABLE = 1;
-	GpioIntRegs.GPIOXINT1SEL.bit.GPIOSEL = 28; // X motor encoder interrupt
+	GpioIntRegs.GPIOXINT1SEL.bit.GPIOSEL = 18; // X motor encoder interrupt
 	GpioIntRegs.GPIOXINT2SEL.bit.GPIOSEL = 0; // Y motor encoder interrupt
 
 
@@ -220,7 +220,7 @@ void DeviceInit(void)
 	AdcRegs.ADCSOC1CTL.bit.ACQPS = 0x6;
     AdcRegs.ADCSOC1CTL.bit.CHSEL = 0x1;
 
-    AdcRegs.INTSEL1N2.bit.INT1SEL = 1;
+    AdcRegs.INTSEL1N2.bit.INT1SEL = 0;
     AdcRegs.INTSEL1N2.bit.INT2SEL = 1;
 
     AdcRegs.INTSEL1N2.bit.INT2E = 1;
