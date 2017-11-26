@@ -81,7 +81,6 @@ volatile static int32_t xPosRef;
 volatile static int32_t yPosRef;
 
 /* Counter incremented by Interrupt*/
-volatile UInt tickCount = 0;
 
 /*
  *  ======== main ========
@@ -118,8 +117,11 @@ Void yEncISR(Void)
 {
 }
 
+
 Void timerISR(Void){
+    // Every step, output to the encoder
     AdcRegs.ADCSOCFRC1.all = 0x3;
+    // Output
 }
 
 Void xVelISR (Void){
@@ -164,7 +166,6 @@ Void yFeedbackControlFxn(Void)
     {
         //Semaphore_pend(yDataAvailable);
         // Process for yVoltage
-
     }
 }
 
