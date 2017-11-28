@@ -65,20 +65,22 @@ extern const Semaphore_Handle yDataAvailable = 0;
 
 // Updated by encoderISR triggers at any time on rising and falling edge
 // Highest priority
-volatile static int32_t xPos;
-volatile static int32_t yPos;
+volatile static int32_t xPos = 0;
+volatile static int32_t yPos = 0;
 
 // updated by ADC SWI
-volatile static int32_t xVel;
-volatile static int32_t yVel;
+volatile static int32_t xVel = 0;
+volatile static int32_t yVel = 0;
 
 // updated every CPU_CYCLES_PER_TICK by feedback
-volatile static int32_t xVoltage;
-volatile static int32_t yVoltage;
+
+#define XVOLTAGE 0
+#define YVOLTAGE 0
+volatile static int32_t voltage[2] = {2400, 1800}; // approximately 1V
 
 // Updated whenever the draw task needs to
-volatile static int32_t xPosRef;
-volatile static int32_t yPosRef;
+volatile static int32_t xPosRef = 0;
+volatile static int32_t yPosRef = 0;
 
 /* Counter incremented by Interrupt*/
 
@@ -89,6 +91,7 @@ volatile static int32_t yPosRef;
 Int main()
 {
     // Sample: Log_info0("Hello world\n");
+
     DeviceInit();
 
     BIOS_start(); /* does not return */
@@ -106,34 +109,51 @@ Void xEncISR(Void)
 {
     uint16_t mask;
     // motor pins on 18 and 29
-    mask = (GpioDataRegs.GPADAT.bit.GPIO18 << 1) + GpioDataRegs.GPADAT.bit.GPIO29;
-    mask = (GpioDataRegs.GPADAT.bit.GPIO18 << 1) + GpioDataRegs.GPADAT.bit.GPIO29;
+    mask = (GpioDataRegs.GPADAT.bit.GPIO28 << 1) + GpioDataRegs.GPADAT.bit.GPIO29;
+    mask = (GpioDataRegs.GPADAT.bit.GPIO28 << 1) + GpioDataRegs.GPADAT.bit.GPIO29;
     xPos += directions[mask];
 }
 
+//xMotor select: GPIO 0
+//yMotor select: GPIO 1
+
 // Pins assigned for yMotor are:
-// J6.1 = A and J6.2 = B
+// J6.1 = x and J6.2 = y
 Void yEncISR(Void)
 {
+    uint16_t mask;
+    // motor pins on 18 and 29
+    mask = (GpioDataRegs.GPADAT.bit.GPIO28 << 1) + GpioDataRegs.GPADAT.bit.GPIO29;
+    yPos += directions[mask];
 }
 
 
 Void timerISR(Void){
     // Every step, output to the encoder
+    static uint16_t xOrY = XVOLTAGE;
     AdcRegs.ADCSOCFRC1.all = 0x3;
     // Output
+
+
+    SpiaRegs.SPITXBUF = voltage[xOrY];
+    //when motor not running, DAC outputs 0; which gets shifted to -10V
+    //so whenever a motor not running; the dac needs to be set to
+    //GpioDataRegs.GPATOGGLE.bit.GPIO0 = 1;
+    //GpioDataRegs.GPATOGGLE.bit.GPIO1 = 1;
+    //xVoltage = 2049;
+    xOrY ^= 1;
 }
 
 Void xVelISR (Void){
     AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
     xVel = AdcResult.ADCRESULT0;
-    Semaphore_post(xDataAvailable);
+    //Semaphore_post(xDataAvailable);
 }
 
 Void yVelISR(Void){
     AdcRegs.ADCINTFLGCLR.bit.ADCINT2 = 1;
     yVel = AdcResult.ADCRESULT1;
-    Semaphore_post(yDataAvailable);
+    //Semaphore_post(yDataAvailable);
 }
 
 
@@ -152,6 +172,10 @@ Void xFeedbackControlFxn(Void)
     {
         //Semaphore_pend(xDataAvailable);
         // Process for xVoltage
+
+        //xVoltage = 2457; // approximately 1V
+        //GpioDataRegs.GPADAT.bit.GPIO0 = 1; //run xmotor
+        //SpiaRegs.SPIDAT = xVoltage;
     }
 }
 

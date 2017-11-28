@@ -204,7 +204,10 @@ void DeviceInit(void)
 	 * */
 	XIntruptRegs.XINT1CR.bit.ENABLE = 1;
 	XIntruptRegs.XINT2CR.bit.ENABLE = 1;
-	GpioIntRegs.GPIOXINT1SEL.bit.GPIOSEL = 18; // X motor encoder interrupt
+	GpioCtrlRegs.GPAPUD.bit.GPIO28 = 1;
+	GpioCtrlRegs.GPAPUD.bit.GPIO29 = 1;
+
+	GpioIntRegs.GPIOXINT1SEL.bit.GPIOSEL = 29; // X motor encoder interrupt
 	GpioIntRegs.GPIOXINT2SEL.bit.GPIOSEL = 0; // Y motor encoder interrupt
 
 
@@ -226,8 +229,6 @@ void DeviceInit(void)
     AdcRegs.INTSEL1N2.bit.INT2E = 1;
     AdcRegs.INTSEL1N2.bit.INT1E = 1;
 
-    PieCtrlRegs.PIEIER1.bit.INTx4 = 1;
-    PieCtrlRegs.PIECTRL.bit.ENPIE = 1;
 
     // Enable the SPI bus
     SpiaRegs.SPICCR.bit.SPISWRESET = 0;
@@ -241,6 +242,12 @@ void DeviceInit(void)
     SpiaRegs.SPIBRR = 0;
 
     SpiaRegs.SPICCR.bit.SPISWRESET = 1;
+
+    PieCtrlRegs.PIEIER1.bit.INTx4 = 1;
+    PieCtrlRegs.PIECTRL.bit.ENPIE = 1;
+
+    GpioDataRegs.GPACLEAR.bit.GPIO0 = 1; // sets gpio to 0 synchronously
+    GpioDataRegs.GPASET.bit.GPIO1 = 1; // sets gpio to 1 synchronously
 
 	EDIS;	// Disable register access
 }
