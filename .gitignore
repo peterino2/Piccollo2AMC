@@ -8,3 +8,7 @@ src/sysbios/sysbios\.a28L
 src/
 
 \.config/
+
+\.cproject
+
+*.launch
