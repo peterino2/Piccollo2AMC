@@ -140,10 +140,11 @@ Void timerISR(Void){
 
     //GpioDataRegs.GPASET.all = xOrYSet[xOrY];
     //GpioDataRegs.GPACLEAR.all = xOrYClear[xOrY];
-
-    SpiaRegs.SPITXBUF = voltage[xOrY];
-    GpioDataRegs.GPATOGGLE.all = 0x12;
+    GpioDataRegs.GPATOGGLE.all = 0xC;
     xOrY ^= 1;
+    SpiaRegs.SPITXBUF = voltage[xOrY];
+
+
 }
 
 Void xVelISR (Void){
