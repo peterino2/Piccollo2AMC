@@ -138,10 +138,11 @@ Void timerISR(Void){
     //when motor not running, DAC outputs 0; which gets shifted to -10V
     //so whenever a motor not running; the dac needs to be set to
 
-    GpioDataRegs.GPASET.all = xOrYSet[xOrY];
-    GpioDataRegs.GPACLEAR.all = xOrYClear[xOrY];
+    //GpioDataRegs.GPASET.all = xOrYSet[xOrY];
+    //GpioDataRegs.GPACLEAR.all = xOrYClear[xOrY];
 
     SpiaRegs.SPITXBUF = voltage[xOrY];
+    GpioDataRegs.GPATOGGLE.all = 0x12;
     xOrY ^= 1;
 }
 
