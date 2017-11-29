@@ -74,8 +74,8 @@ volatile static int32_t yVel = 0;
 
 // updated every CPU_CYCLES_PER_TICK by feedback
 
-#define XVOLTAGE 0
-#define YVOLTAGE 0
+#define X_OUTPUT 0
+#define Y_OUTPUT 1
 volatile static int32_t voltage[2] = {2400, 1800}; // approximately 1V
 
 // Updated whenever the draw task needs to
@@ -110,7 +110,6 @@ Void xEncISR(Void)
     uint16_t mask;
     // motor pins on 18 and 29
     mask = (GpioDataRegs.GPADAT.bit.GPIO28 << 1) + GpioDataRegs.GPADAT.bit.GPIO29;
-    mask = (GpioDataRegs.GPADAT.bit.GPIO28 << 1) + GpioDataRegs.GPADAT.bit.GPIO29;
     xPos += directions[mask];
 }
 
@@ -127,20 +126,23 @@ Void yEncISR(Void)
     yPos += directions[mask];
 }
 
+uint16_t xOrYSet[] = {8, 4};
+uint16_t xOrYClear[] = {4, 8};
 
 Void timerISR(Void){
     // Every step, output to the encoder
-    static uint16_t xOrY = XVOLTAGE;
+    static uint16_t xOrY = X_OUTPUT;
     AdcRegs.ADCSOCFRC1.all = 0x3;
     // Output
 
-
-    SpiaRegs.SPITXBUF = voltage[xOrY];
     //when motor not running, DAC outputs 0; which gets shifted to -10V
     //so whenever a motor not running; the dac needs to be set to
-    //GpioDataRegs.GPATOGGLE.bit.GPIO0 = 1;
-    //GpioDataRegs.GPATOGGLE.bit.GPIO1 = 1;
-    //xVoltage = 2049;
+
+    //GpioDataRegs.GPASET.all = xOrYSet[xOrY];
+    //GpioDataRegs.GPACLEAR.all = xOrYClear[xOrY];
+
+    SpiaRegs.SPITXBUF = voltage[xOrY];
+    GpioDataRegs.GPATOGGLE.all = 0x12;
     xOrY ^= 1;
 }
 
@@ -167,7 +169,7 @@ Void yVelISR(Void){
 #define X_KI 1
 Void xFeedbackControlFxn(Void)
 {
-    static int32_t integral;
+    static int16_t integral;
     while (1)
     {
         //Semaphore_pend(xDataAvailable);
@@ -185,7 +187,7 @@ Void xFeedbackControlFxn(Void)
 
 Void yFeedbackControlFxn(Void)
 {
-    static int32_t integral;
+    static int16_t integral;
     while (1)
     {
         //Semaphore_pend(yDataAvailable);

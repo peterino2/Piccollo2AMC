@@ -78,27 +78,27 @@ void DeviceInit(void)
 //--------------------------------------------------------------------------------------
 //  GPIO-00 - PIN FUNCTION = --Spare--
 	GpioCtrlRegs.GPAMUX1.bit.GPIO0 = 0;		// 0=GPIO,  1=EPWM1A,  2=Resv,  3=Resv
-	GpioCtrlRegs.GPADIR.bit.GPIO0 = 1;		// 1=OUTput,  0=INput 
+	GpioCtrlRegs.GPADIR.bit.GPIO0 = 0;		// 1=OUTput,  0=INput
 //	GpioDataRegs.GPACLEAR.bit.GPIO0 = 1;	// uncomment if --> Set Low initially
-	GpioDataRegs.GPASET.bit.GPIO0 = 1;		// uncomment if --> Set High initially
+//	GpioDataRegs.GPASET.bit.GPIO0 = 1;		// uncomment if --> Set High initially
 //--------------------------------------------------------------------------------------
 //  GPIO-01 - PIN FUNCTION = --Spare--
 	GpioCtrlRegs.GPAMUX1.bit.GPIO1 = 0;		// 0=GPIO,  1=EPWM1B,  2=EMU0,  3=COMP1OUT
-	GpioCtrlRegs.GPADIR.bit.GPIO1 = 1;		// 1=OUTput,  0=INput 
+	GpioCtrlRegs.GPADIR.bit.GPIO1 = 0;		// 1=OUTput,  0=INput
 //	GpioDataRegs.GPACLEAR.bit.GPIO1 = 1;	// uncomment if --> Set Low initially
-	GpioDataRegs.GPASET.bit.GPIO1 = 1;		// uncomment if --> Set High initially
+//	GpioDataRegs.GPASET.bit.GPIO1 = 1;		// uncomment if --> Set High initially
 //--------------------------------------------------------------------------------------
-//  GPIO-02 - PIN FUNCTION = --Spare--
+//  GPIO-02 - PIN FUNCTION = --Spare-- - DACEN pin x
 	GpioCtrlRegs.GPAMUX1.bit.GPIO2 = 0;		// 0=GPIO,  1=EPWM2A,  2=Resv,  3=Resv
-	GpioCtrlRegs.GPADIR.bit.GPIO2 = 0;		// 1=OUTput,  0=INput 
-//	GpioDataRegs.GPACLEAR.bit.GPIO2 = 1;	// uncomment if --> Set Low initially
+	GpioCtrlRegs.GPADIR.bit.GPIO2 = 1;		// 1=OUTput,  0=INput
+	GpioDataRegs.GPACLEAR.bit.GPIO2 = 1;	// uncomment if --> Set Low initially
 //	GpioDataRegs.GPASET.bit.GPIO2 = 1;		// uncomment if --> Set High initially
 //--------------------------------------------------------------------------------------
-//  GPIO-03 - PIN FUNCTION = --Spare--
+//  GPIO-03 - PIN FUNCTION = --Spare-- - DACEN pin y
 	GpioCtrlRegs.GPAMUX1.bit.GPIO3 = 0;		// 0=GPIO,  1=EPWM2B,  2=Resv,  3=COMP2OUT
-	GpioCtrlRegs.GPADIR.bit.GPIO3 = 0;		// 1=OUTput,  0=INput 
+	GpioCtrlRegs.GPADIR.bit.GPIO3 = 1;		// 1=OUTput,  0=INput
 //	GpioDataRegs.GPACLEAR.bit.GPIO3 = 1;	// uncomment if --> Set Low initially
-//	GpioDataRegs.GPASET.bit.GPIO3 = 1;		// uncomment if --> Set High initially
+	GpioDataRegs.GPASET.bit.GPIO3 = 1;		// uncomment if --> Set High initially
 //--------------------------------------------------------------------------------------
 //  GPIO-04 - PIN FUNCTION = --Spare--
 	GpioCtrlRegs.GPAMUX1.bit.GPIO4 = 0;		// 0=GPIO,  1=EPWM3A, 2=Resv, 	3=Resv
@@ -210,6 +210,10 @@ void DeviceInit(void)
 	GpioIntRegs.GPIOXINT1SEL.bit.GPIOSEL = 29; // X motor encoder interrupt
 	GpioIntRegs.GPIOXINT2SEL.bit.GPIOSEL = 0; // Y motor encoder interrupt
 
+	// initial conditions: x = 1 y = 0;
+
+    GpioDataRegs.GPASET.bit.GPIO3 = 1; // sets gpio to 1 synchronously
+    GpioDataRegs.GPACLEAR.bit.GPIO2 = 1; // sets gpio to 0 synchronously
 
 	AdcRegs.ADCCTL1.bit.ADCPWDN = 1;
 	AdcRegs.ADCCTL1.bit.ADCREFPWD = 1;
