@@ -74,8 +74,8 @@ volatile static int32_t yVel = 0;
 
 // updated every CPU_CYCLES_PER_TICK by feedback
 
-#define XVOLTAGE 0
-#define YVOLTAGE 0
+#define X_OUTPUT 0
+#define Y_OUTPUT 1
 volatile static int32_t voltage[2] = {2400, 1800}; // approximately 1V
 
 // Updated whenever the draw task needs to
@@ -129,17 +129,29 @@ Void yEncISR(Void)
 
 Void timerISR(Void){
     // Every step, output to the encoder
-    static uint16_t xOrY = XVOLTAGE;
+    static uint16_t xOrY = X_OUTPUT;
     AdcRegs.ADCSOCFRC1.all = 0x3;
     // Output
 
-    GpioDataRegs.GPACLEAR.bit.GPIO0 = 1; // sets gpio to 0 synchronously
-    GpioDataRegs.GPASET.bit.GPIO1 = 1; // sets gpio to 1 synchronously
-
     //when motor not running, DAC outputs 0; which gets shifted to -10V
     //so whenever a motor not running; the dac needs to be set to
-
-    //xVoltage = 2049;
+    switch(xOrY){
+    case X_OUTPUT:
+        // GPASET.all = 0b1000 = 8
+        GpioDataRegs.GPASET.bit.GPIO2 = 0;
+        GpioDataRegs.GPASET.bit.GPIO3 = 1;
+        // GPACLEAR.all = 0b0100 = 4
+        GpioDataRegs.GPACLEAR.bit.GPIO2 = 1;
+        GpioDataRegs.GPACLEAR.bit.GPIO3 = 0;
+        break;
+    case Y_OUTPUT:
+        // GPASET.all = 0b0100 = 4
+        GpioDataRegs.GPASET.bit.GPIO2 = 1;
+        GpioDataRegs.GPASET.bit.GPIO3 = 0;
+        // GPACLEAR.all = 0b1000 = 8
+        GpioDataRegs.GPACLEAR.bit.GPIO2 = 0;
+        GpioDataRegs.GPACLEAR.bit.GPIO3 = 1;
+    }
     xOrY ^= 1;
     SpiaRegs.SPITXBUF = voltage[xOrY];
 }
