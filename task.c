@@ -126,6 +126,8 @@ Void yEncISR(Void)
     yPos += directions[mask];
 }
 
+uint16_t xOrYSet[] = {8, 4};
+uint16_t xOrYClear[] = {4, 8};
 
 Void timerISR(Void){
     // Every step, output to the encoder
@@ -135,25 +137,12 @@ Void timerISR(Void){
 
     //when motor not running, DAC outputs 0; which gets shifted to -10V
     //so whenever a motor not running; the dac needs to be set to
-    switch(xOrY){
-    case X_OUTPUT:
-        // GPASET.all = 0b1000 = 8
-        GpioDataRegs.GPASET.bit.GPIO2 = 0;
-        GpioDataRegs.GPASET.bit.GPIO3 = 1;
-        // GPACLEAR.all = 0b0100 = 4
-        GpioDataRegs.GPACLEAR.bit.GPIO2 = 1;
-        GpioDataRegs.GPACLEAR.bit.GPIO3 = 0;
-        break;
-    case Y_OUTPUT:
-        // GPASET.all = 0b0100 = 4
-        GpioDataRegs.GPASET.bit.GPIO2 = 1;
-        GpioDataRegs.GPASET.bit.GPIO3 = 0;
-        // GPACLEAR.all = 0b1000 = 8
-        GpioDataRegs.GPACLEAR.bit.GPIO2 = 0;
-        GpioDataRegs.GPACLEAR.bit.GPIO3 = 1;
-    }
-    xOrY ^= 1;
+
+    GpioDataRegs.GPASET.all = xOrYSet[xOrY];
+    GpioDataRegs.GPACLEAR.all = xOrYClear[xOrY];
+
     SpiaRegs.SPITXBUF = voltage[xOrY];
+    xOrY ^= 1;
 }
 
 Void xVelISR (Void){
