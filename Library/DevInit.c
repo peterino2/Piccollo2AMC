@@ -137,8 +137,8 @@ void DeviceInit(void)
 //--------------------------------------------------------------------------------------
 
 //  GPIO-16 - PIN FUNCTION = --Spare--
-	GpioCtrlRegs.GPAMUX2.bit.GPIO16 = 0;	// 0=GPIO,  1=SPISIMO-A,  2=Resv,  3=TZ2
-	GpioCtrlRegs.GPADIR.bit.GPIO16 = 0;		// 1=OUTput,  0=INput 
+	GpioCtrlRegs.GPAMUX2.bit.GPIO16 = 1;	// 0=GPIO,  1=SPISIMO-A,  2=Resv,  3=TZ2
+	GpioCtrlRegs.GPADIR.bit.GPIO16 = 1;		// 1=OUTput,  0=INput
 //	GpioDataRegs.GPACLEAR.bit.GPIO16 = 1;	// uncomment if --> Set Low initially
 //	GpioDataRegs.GPASET.bit.GPIO16 = 1;		// uncomment if --> Set High initially
 //--------------------------------------------------------------------------------------
@@ -149,14 +149,14 @@ void DeviceInit(void)
 //	GpioDataRegs.GPASET.bit.GPIO17 = 1;		// uncomment if --> Set High initially
 //--------------------------------------------------------------------------------------
 //  GPIO-18 - PIN FUNCTION = --Spare--
-	GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 0;	// 0=GPIO,  1=SPICLK-A,  2=SCITX-A,  3=XCLKOUT
-	GpioCtrlRegs.GPADIR.bit.GPIO18 = 0;		// 1=OUTput,  0=INput 
+	GpioCtrlRegs.GPAMUX2.bit.GPIO18 = 1;	// 0=GPIO,  1=SPICLK-A,  2=SCITX-A,  3=XCLKOUT
+	GpioCtrlRegs.GPADIR.bit.GPIO18 = 1;		// 1=OUTput,  0=INput
 //	GpioDataRegs.GPACLEAR.bit.GPIO18 = 1;	// uncomment if --> Set Low initially
 //	GpioDataRegs.GPASET.bit.GPIO18 = 1;		// uncomment if --> Set High initially
 //--------------------------------------------------------------------------------------
 //  GPIO-19 - PIN FUNCTION = --Spare--
-	GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 0;	// 0=GPIO,  1=SPISTE-A,  2=SCIRX-A,  3=ECAP1
-	GpioCtrlRegs.GPADIR.bit.GPIO19 = 0;		// 1=OUTput,  0=INput 
+	GpioCtrlRegs.GPAMUX2.bit.GPIO19 = 1;	// 0=GPIO,  1=SPISTE-A,  2=SCIRX-A,  3=ECAP1
+	GpioCtrlRegs.GPADIR.bit.GPIO19 = 1;		// 1=OUTput,  0=INput
 //	GpioDataRegs.GPACLEAR.bit.GPIO19 = 1;	// uncomment if --> Set Low initially
 //	GpioDataRegs.GPASET.bit.GPIO19 = 1;		// uncomment if --> Set High initially
 //--------------------------------------------------------------------------------------
@@ -204,6 +204,9 @@ void DeviceInit(void)
 	 * */
 	XIntruptRegs.XINT1CR.bit.ENABLE = 1;
 	XIntruptRegs.XINT2CR.bit.ENABLE = 1;
+	GpioCtrlRegs.GPAPUD.bit.GPIO28 = 1;
+	GpioCtrlRegs.GPAPUD.bit.GPIO29 = 1;
+
 	GpioIntRegs.GPIOXINT1SEL.bit.GPIOSEL = 29; // X motor encoder interrupt
 	GpioIntRegs.GPIOXINT2SEL.bit.GPIOSEL = 0; // Y motor encoder interrupt
 
@@ -226,10 +229,23 @@ void DeviceInit(void)
     AdcRegs.INTSEL1N2.bit.INT2E = 1;
     AdcRegs.INTSEL1N2.bit.INT1E = 1;
 
+
+    // Enable the SPI bus
+    SpiaRegs.SPICCR.bit.SPISWRESET = 0;
+
+    SpiaRegs.SPICCR.bit.CLKPOLARITY = 1;
+    SpiaRegs.SPICCR.bit.SPICHAR = 15;
+
+    SpiaRegs.SPICTL.bit.CLK_PHASE = 1;
+    SpiaRegs.SPICTL.bit.TALK = 1;
+    SpiaRegs.SPICTL.bit.MASTER_SLAVE = 1;
+    SpiaRegs.SPIBRR = 0;
+
+    SpiaRegs.SPICCR.bit.SPISWRESET = 1;
+
+
     PieCtrlRegs.PIEIER1.bit.INTx4 = 1;
     PieCtrlRegs.PIECTRL.bit.ENPIE = 1;
-
-
 	EDIS;	// Disable register access
 }
 

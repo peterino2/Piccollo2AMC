@@ -65,23 +65,24 @@ extern const Semaphore_Handle yDataAvailable = 0;
 
 // Updated by encoderISR triggers at any time on rising and falling edge
 // Highest priority
-volatile static int16_t xPos = 0;
-volatile static int16_t yPos = 0;
+volatile static int32_t xPos = 0;
+volatile static int32_t yPos = 0;
 
 // updated by ADC SWI
-volatile static int16_t xVel = 0;
-volatile static int16_t yVel = 0;
+volatile static int32_t xVel = 0;
+volatile static int32_t yVel = 0;
 
 // updated every CPU_CYCLES_PER_TICK by feedback
-volatile static int16_t xVoltage = 0;
-volatile static int16_t yVoltage = 0;
+
+#define XVOLTAGE 0
+#define YVOLTAGE 0
+volatile static int32_t voltage[2] = {2400, 1800}; // approximately 1V
 
 // Updated whenever the draw task needs to
-volatile static int16_t xPosRef = 0;
-volatile static int16_t yPosRef = 0;
+volatile static int32_t xPosRef = 0;
+volatile static int32_t yPosRef = 0;
 
 /* Counter incremented by Interrupt*/
-volatile UInt tickCount = 0;
 
 /*
  *  ======== main ========
@@ -90,6 +91,7 @@ volatile UInt tickCount = 0;
 Int main()
 {
     // Sample: Log_info0("Hello world\n");
+
     DeviceInit();
 
     BIOS_start(); /* does not return */
@@ -97,63 +99,61 @@ Int main()
 }
 
 
-/*
- * encDirections is a lookup table that tells you which direction
- * the encoder is moving
- * */
-const int16_t encDeltas[16] = {
-        // If previous movement was negative
-        0, -1, -1, 0,
-        // If previous movement was positive
-        1, 0, 0, 1,
-        // If previous movement was neither
-        1, -1, -1, 1, 1, -1, -1, 1
-};
-
 /* Backward, Stop, Forward*/
-const uint16_t encDirCodes[3] = { 0, 8, 4 };
+// Pins assigned for xMotor are:
+// J
 
-#define BACKWARD 0
-#define STOP 1
-#define FORWARD 2
-
+int16_t directions[] = {1, -1, -1, 1};
 
 Void xEncISR(Void)
 {
-    static uint16_t previous = 8;
-    int16_t delta, mask;
-    DelayUs(1000);
-    mask = ( (GpioDataRegs.GPADAT.bit.GPIO18 << 1) | GpioDataRegs.GPADAT.bit.GPIO29) & 0x3;
-    delta = encDeltas[previous|mask];
-    previous = encDirCodes[delta + 1];
-    xPos += delta;
+    uint16_t mask;
+    // motor pins on 18 and 29
+    mask = (GpioDataRegs.GPADAT.bit.GPIO28 << 1) + GpioDataRegs.GPADAT.bit.GPIO29;
+    xPos += directions[mask];
 }
+
+//xMotor select: GPIO 0
+//yMotor select: GPIO 1
 
 // Pins assigned for yMotor are:
-// J6.1 = A and J6.2 = Bn
+// J6.1 = x and J6.2 = y
 Void yEncISR(Void)
 {
-    static int previous = 8;
-    uint16_t delta;
-    delta = encDeltas[previous|( GpioDataRegs.GPADAT.all ) & 0x3];
-    previous = encDirCodes[delta + 1];
-    yPos += delta;
+    uint16_t mask;
+    // motor pins on 18 and 29
+    mask = (GpioDataRegs.GPADAT.bit.GPIO28 << 1) + GpioDataRegs.GPADAT.bit.GPIO29;
+    yPos += directions[mask];
 }
 
+
 Void timerISR(Void){
+    // Every step, output to the encoder
+    static uint16_t xOrY = XVOLTAGE;
     AdcRegs.ADCSOCFRC1.all = 0x3;
+    // Output
+
+    GpioDataRegs.GPACLEAR.bit.GPIO0 = 1; // sets gpio to 0 synchronously
+    GpioDataRegs.GPASET.bit.GPIO1 = 1; // sets gpio to 1 synchronously
+
+    //when motor not running, DAC outputs 0; which gets shifted to -10V
+    //so whenever a motor not running; the dac needs to be set to
+
+    //xVoltage = 2049;
+    xOrY ^= 1;
+    SpiaRegs.SPITXBUF = voltage[xOrY];
 }
 
 Void xVelISR (Void){
     AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
     xVel = AdcResult.ADCRESULT0;
-//    Semaphore_post(xDataAvailable);
+    //Semaphore_post(xDataAvailable);
 }
 
 Void yVelISR(Void){
     AdcRegs.ADCINTFLGCLR.bit.ADCINT2 = 1;
     yVel = AdcResult.ADCRESULT1;
-//    Semaphore_post(yDataAvailable);
+    //Semaphore_post(yDataAvailable);
 }
 
 
@@ -172,6 +172,10 @@ Void xFeedbackControlFxn(Void)
     {
         //Semaphore_pend(xDataAvailable);
         // Process for xVoltage
+
+        //xVoltage = 2457; // approximately 1V
+        //GpioDataRegs.GPADAT.bit.GPIO0 = 1; //run xmotor
+        //SpiaRegs.SPIDAT = xVoltage;
     }
 }
 
@@ -186,7 +190,6 @@ Void yFeedbackControlFxn(Void)
     {
         //Semaphore_pend(yDataAvailable);
         // Process for yVoltage
-
     }
 }
 
