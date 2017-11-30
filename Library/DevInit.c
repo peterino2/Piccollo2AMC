@@ -192,7 +192,7 @@ void DeviceInit(void)
 //--------------------------------------------------------------------------------------
 //  GPIO-34 - PIN FUNCTION = LED for F28027 USB dongle
 	GpioCtrlRegs.GPBMUX1.bit.GPIO34 = 0;	// 0=GPIO,  1=COMP2OUT,  2=EMU1,  3=Resv
-	GpioCtrlRegs.GPBDIR.bit.GPIO34 = 1;		// 1=OUTput,  0=INput 
+	GpioCtrlRegs.GPBDIR.bit.GPIO34 = 0;		// 1=OUTput,  0=INput
 //	GpioDataRegs.GPBCLEAR.bit.GPIO34 = 1;	// uncomment if --> Set Low initially
 	GpioDataRegs.GPBSET.bit.GPIO34 = 1;		// uncomment if --> Set High initially
 //--------------------------------------------------------------------------------------
@@ -204,14 +204,11 @@ void DeviceInit(void)
 	 * */
 	XIntruptRegs.XINT1CR.bit.ENABLE = 1;
 	XIntruptRegs.XINT2CR.bit.ENABLE = 1;
-	GpioCtrlRegs.GPAPUD.bit.GPIO28 = 1;
-	GpioCtrlRegs.GPAPUD.bit.GPIO29 = 1;
+	XIntruptRegs.XINT1CR.bit.POLARITY = 3;
+	XIntruptRegs.XINT2CR.bit.POLARITY = 3;
 
-	GpioIntRegs.GPIOXINT1SEL.bit.GPIOSEL = 29; // X motor encoder interrupt
+	GpioIntRegs.GPIOXINT1SEL.bit.GPIOSEL = 5; // X motor encoder interrupt
 	GpioIntRegs.GPIOXINT2SEL.bit.GPIOSEL = 0; // Y motor encoder interrupt
-
-	// initial conditions: x = 1 y = 0;
-
     GpioDataRegs.GPASET.bit.GPIO3 = 1; // sets gpio to 1 synchronously
     GpioDataRegs.GPACLEAR.bit.GPIO2 = 1; // sets gpio to 0 synchronously
 
@@ -252,7 +249,6 @@ void DeviceInit(void)
 
     GpioDataRegs.GPACLEAR.bit.GPIO0 = 1; // sets gpio to 0 synchronously
     GpioDataRegs.GPASET.bit.GPIO1 = 1; // sets gpio to 1 synchronously
-
 	EDIS;	// Disable register access
 }
 

@@ -46,6 +46,7 @@
  *
  */
 
+#define xdc__strict
 #include <xdc/std.h>
 #include <xdc/runtime/Log.h>
 #include <ti/sysbios/BIOS.h>
@@ -104,13 +105,16 @@ Int main()
 // J
 
 int16_t directions[] = {1, -1, -1, 1};
-
+static uint16_t xMask;
+static uint16_t yMask;
 Void xEncISR(Void)
 {
-    uint16_t mask;
+
     // motor pins on 18 and 29
-    mask = (GpioDataRegs.GPADAT.bit.GPIO28 << 1) + GpioDataRegs.GPADAT.bit.GPIO29;
-    xPos += directions[mask];
+    xMask =  (GpioDataRegs.GPADAT.bit.GPIO5 << 1) + GpioDataRegs.GPADAT.bit.GPIO4;
+    xMask =  (GpioDataRegs.GPADAT.bit.GPIO5 << 1) + GpioDataRegs.GPADAT.bit.GPIO4;
+    xMask =  (GpioDataRegs.GPADAT.bit.GPIO5 << 1) + GpioDataRegs.GPADAT.bit.GPIO4;
+    xPos += directions[xMask];
 }
 
 //xMotor select: GPIO 0
@@ -120,14 +124,9 @@ Void xEncISR(Void)
 // J6.1 = x and J6.2 = y
 Void yEncISR(Void)
 {
-    uint16_t mask;
-    // motor pins on 18 and 29
-    mask = (GpioDataRegs.GPADAT.bit.GPIO28 << 1) + GpioDataRegs.GPADAT.bit.GPIO29;
-    yPos += directions[mask];
+    yMask = (GpioDataRegs.GPADAT.bit.GPIO1 << 1) + GpioDataRegs.GPADAT.bit.GPIO0;
+    yPos += directions[yMask];
 }
-
-uint16_t xOrYSet[] = {8, 4};
-uint16_t xOrYClear[] = {4, 8};
 
 Void timerISR(Void){
     // Every step, output to the encoder
@@ -137,9 +136,6 @@ Void timerISR(Void){
 
     //when motor not running, DAC outputs 0; which gets shifted to -10V
     //so whenever a motor not running; the dac needs to be set to
-
-    //GpioDataRegs.GPASET.all = xOrYSet[xOrY];
-    //GpioDataRegs.GPACLEAR.all = xOrYClear[xOrY];
     GpioDataRegs.GPATOGGLE.all = 0xC;
     xOrY ^= 1;
     SpiaRegs.SPITXBUF = voltage[xOrY];
