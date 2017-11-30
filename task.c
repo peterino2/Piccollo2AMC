@@ -46,11 +46,13 @@
  *
  */
 
+#define xdc__strict
 #include <xdc/std.h>
 #include <xdc/runtime/Log.h>
 #include <ti/sysbios/BIOS.h>
 #include <ti/sysbios/knl/Task.h>
 #include <ti/sysbios/knl/Semaphore.h>
+#include <ti/sysbios/knl/Swi.h>
 #include "Library/Devinit.h"
 #include "Library/DSP2802x_Device.h"
 
@@ -61,26 +63,27 @@
 
 extern const Semaphore_Handle xDataAvailable = 0;
 extern const Semaphore_Handle yDataAvailable = 0;
-
+extern const Swi_Handle xVelProcSwi;
+extern const Swi_Handle yVelProcSwi;
 
 // Updated by encoderISR triggers at any time on rising and falling edge
 // Highest priority
-volatile static int32_t xPos = 0;
-volatile static int32_t yPos = 0;
+static volatile int32_t xPos = 0;
+static volatile int32_t yPos = 0;
 
 // updated by ADC SWI
-volatile static int32_t xVel = 0;
-volatile static int32_t yVel = 0;
+static volatile int32_t xVel = 0;
+static volatile int32_t yVel = 0;
 
 // updated every CPU_CYCLES_PER_TICK by feedback
 
 #define X_OUTPUT 0
 #define Y_OUTPUT 1
-volatile static int32_t voltage[2] = {2400, 1800}; // approximately 1V
+static volatile int32_t voltage[2] = {2400, 1800}; // approximately 1V
 
 // Updated whenever the draw task needs to
-volatile static int32_t xPosRef = 0;
-volatile static int32_t yPosRef = 0;
+static volatile int32_t xPosRef = 0;
+static volatile int32_t yPosRef = 0;
 
 /* Counter incremented by Interrupt*/
 
@@ -104,30 +107,22 @@ Int main()
 // J
 
 int16_t directions[] = {1, -1, -1, 1};
-
+static uint16_t xMask;
+static uint16_t yMask;
 Void xEncISR(Void)
 {
-    uint16_t mask;
     // motor pins on 18 and 29
-    mask = (GpioDataRegs.GPADAT.bit.GPIO28 << 1) + GpioDataRegs.GPADAT.bit.GPIO29;
-    xPos += directions[mask];
+    xMask =  (GpioDataRegs.GPADAT.bit.GPIO5 << 1) + GpioDataRegs.GPADAT.bit.GPIO4;
+    xPos += directions[xMask];
 }
-
-//xMotor select: GPIO 0
-//yMotor select: GPIO 1
 
 // Pins assigned for yMotor are:
 // J6.1 = x and J6.2 = y
 Void yEncISR(Void)
 {
-    uint16_t mask;
-    // motor pins on 18 and 29
-    mask = (GpioDataRegs.GPADAT.bit.GPIO28 << 1) + GpioDataRegs.GPADAT.bit.GPIO29;
-    yPos += directions[mask];
+    yMask = (GpioDataRegs.GPADAT.bit.GPIO1 << 1) + GpioDataRegs.GPADAT.bit.GPIO0;
+    yPos += directions[yMask];
 }
-
-uint16_t xOrYSet[] = {8, 4};
-uint16_t xOrYClear[] = {4, 8};
 
 Void timerISR(Void){
     // Every step, output to the encoder
@@ -137,29 +132,47 @@ Void timerISR(Void){
 
     //when motor not running, DAC outputs 0; which gets shifted to -10V
     //so whenever a motor not running; the dac needs to be set to
-
-    //GpioDataRegs.GPASET.all = xOrYSet[xOrY];
-    //GpioDataRegs.GPACLEAR.all = xOrYClear[xOrY];
     GpioDataRegs.GPATOGGLE.all = 0xC;
     xOrY ^= 1;
     SpiaRegs.SPITXBUF = voltage[xOrY];
 
 
 }
-
+#define F_TAPS 8
+uint16_t xVelRaw[F_TAPS] = {0};
+uint16_t yVelRaw[F_TAPS] = {0};
+// these are moving average filters
 Void xVelISR (Void){
+    static uint16_t i = 0;
     AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
-    xVel = AdcResult.ADCRESULT0;
-    //Semaphore_post(xDataAvailable);
+    Swi_post(xVelProcSwi);
+    xVelRaw[i] = AdcResult.ADCRESULT0;
+    i = (i + 1) & 0x7;
+}
+
+Void xVelProcFxn(Void){
+    int i;
+    xVel = 0;
+    for (i = 0; i < F_TAPS; i++)
+        xVel += xVelRaw[i];
+    xVel >>= 3;
 }
 
 Void yVelISR(Void){
+    static uint16_t i = 0;
     AdcRegs.ADCINTFLGCLR.bit.ADCINT2 = 1;
-    yVel = AdcResult.ADCRESULT1;
-    //Semaphore_post(yDataAvailable);
+    Swi_post(yVelProcSwi);
+    yVelRaw[i] = AdcResult.ADCRESULT1;
+    i = (i + 1)&0x7;
 }
 
-
+Void yVelProcFxn(Void){
+    int i;
+    yVel = 0;
+    for (i = 0; i < F_TAPS; i++)
+        yVel += yVelRaw[i];
+    yVel >>= 3;
+}
 /*
  *  ======== Feedback Control Function ========
  * Process the implemented PID control loop SWI

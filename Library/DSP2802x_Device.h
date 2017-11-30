@@ -97,7 +97,6 @@ extern cregister volatile unsigned int IER;
 // For Portability, User Is Recommended To Use Following Data Type Size
 // Definitions For 16-bit and 32-Bit Signed/Unsigned Integers:
 //
-
 #ifndef DSP28_DATA_TYPES
 #define DSP28_DATA_TYPES
 typedef int             int16;
