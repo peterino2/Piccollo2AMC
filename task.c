@@ -79,6 +79,7 @@ static volatile int32_t yVel = 0;
 
 #define X_OUTPUT 0
 #define Y_OUTPUT 1
+#define Q_VALUE  8
 static volatile int32_t voltage[2] = {2400, 1800}; // approximately 1V
 
 // Updated whenever the draw task needs to
