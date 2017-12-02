@@ -79,7 +79,15 @@ static volatile int32_t yVel = 0;
 
 #define X_OUTPUT 0
 #define Y_OUTPUT 1
-#define Q_VALUE  8
+#define Q_VALUE  16
+
+#define ENCODERCALIB 90 // 360/2048 ticks per rotation represented in q9
+#define ENCODERCALIB_Q 9
+#define TACHOCALIB 357 // = .6975 Q9
+#define TACHOCALIB_Q 9 // = .6975 Q9
+#define VOLTAGECALIB_Q
+#define VOLTAGEOFFSET_Q
+
 static volatile int32_t voltage[2] = {2400, 1800}; // approximately 1V
 
 // Updated whenever the draw task needs to
@@ -107,7 +115,8 @@ Int main()
 // Pins assigned for xMotor are:
 // J
 
-int16_t directions[] = {1, -1, -1, 1};
+#define ENCODER_DIRECTIONS 11520 // per tick in Q16 converted to 360 degrees per rotation
+int32_t directions[] = {11520, -11520, -11520, 11520};
 static uint16_t xMask;
 static uint16_t yMask;
 Void xEncISR(Void)
@@ -148,15 +157,16 @@ Void xVelISR (Void){
     AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
     Swi_post(xVelProcSwi);
     xVelRaw[i] = AdcResult.ADCRESULT0;
-    i = (i + 1) & 0x7;
+    i = (i + 1) & 7;
 }
 
 Void xVelProcFxn(Void){
     int i;
-    xVel = 0;
+    uint32_t cVel = 0;
     for (i = 0; i < F_TAPS; i++)
-        xVel += xVelRaw[i];
-    xVel >>= 3;
+        cVel += xVelRaw[i];
+    xVel = ((cVel <<11) * TACHOCALIB);
+    xVel >>= TACHOCALIB_Q;
 }
 
 Void yVelISR(Void){
@@ -164,15 +174,16 @@ Void yVelISR(Void){
     AdcRegs.ADCINTFLGCLR.bit.ADCINT2 = 1;
     Swi_post(yVelProcSwi);
     yVelRaw[i] = AdcResult.ADCRESULT1;
-    i = (i + 1)&0x7;
+    i = (i + 1) & 7;
 }
 
 Void yVelProcFxn(Void){
     int i;
-    yVel = 0;
+    uint32_t cVel = 0;
     for (i = 0; i < F_TAPS; i++)
-        yVel += yVelRaw[i];
-    yVel >>= 3;
+        cVel += yVelRaw[i];
+    yVel = ((cVel <<11) * TACHOCALIB);
+    yVel >>= TACHOCALIB_Q;
 }
 /*
  *  ======== Feedback Control Function ========
@@ -181,7 +192,6 @@ Void yVelProcFxn(Void){
  */
 #define X_KD 1
 #define X_KP 1
-#define X_KI 1
 Void xFeedbackControlFxn(Void)
 {
     static int16_t integral;
@@ -198,7 +208,6 @@ Void xFeedbackControlFxn(Void)
 
 #define Y_KD 1
 #define Y_KP 1
-#define Y_KI 1
 
 Void yFeedbackControlFxn(Void)
 {
