@@ -167,6 +167,7 @@ Void xVelProcFxn(Void){
         cVel += xVelRaw[i];
     xVel = ((cVel <<11) * TACHOCALIB);
     xVel >>= TACHOCALIB_Q;
+    Semaphore_post(xDataAvailable);
 }
 
 Void yVelISR(Void){
@@ -184,22 +185,28 @@ Void yVelProcFxn(Void){
         cVel += yVelRaw[i];
     yVel = ((cVel <<11) * TACHOCALIB);
     yVel >>= TACHOCALIB_Q;
+   // Semaphore_post(yDataAvailable);
 }
 /*
  *  ======== Feedback Control Function ========
  * Process the implemented PID control loop SWI
  * triggers once every 0.001s
  */
-#define X_KD 1
-#define X_KP 1
+#define X_KD 96 // 0.188 in q9
+#define X_KP 286 // 0.559 in q9
 Void xFeedbackControlFxn(Void)
 {
-    static int16_t integral;
+    int32_t err;
     while (1)
     {
-        //Semaphore_pend(xDataAvailable);
+        Semaphore_pend(xDataAvailable, 10000);
         // Process for xVoltage
-
+        err = xPosRef - xPos;
+        err = (err * X_KP)>>9;
+        err -= (X_KD * xVel)>>9;
+        err = err + 524288;
+        err = (err * 256)>>9;
+        voltage[X_OUTPUT] = err >> Q_VALUE;
         //xVoltage = 2457; // approximately 1V
         //GpioDataRegs.GPADAT.bit.GPIO0 = 1; //run xmotor
         //SpiaRegs.SPIDAT = xVoltage;
@@ -211,7 +218,6 @@ Void xFeedbackControlFxn(Void)
 
 Void yFeedbackControlFxn(Void)
 {
-    static int16_t integral;
     while (1)
     {
         //Semaphore_pend(yDataAvailable);
