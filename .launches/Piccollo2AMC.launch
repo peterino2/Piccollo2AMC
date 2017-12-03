@@ -22,6 +22,9 @@
 <stringAttribute key="com.ti.ccstudio.debug.debugModel.ATTR_PROJECT.Texas Instruments XDS100v3 USB Emulator/C28xx" value="Piccollo2AMC"/>
 <stringAttribute key="com.ti.ccstudio.debug.debugModel.ATTR_TARGET_CONFIG" value="${target_config_active_default:Piccollo2AMC}"/>
 <stringAttribute key="com.ti.ccstudio.debug.debugModel.MRU_PROGRAM.Texas Instruments XDS100v2 USB Debug Probe_0/C28xx" value="C:/Users\A00927195\Desktop\git\Piccolo2AmcRebuild\Piccollo2AMC\Debug\Piccollo2AMC.out"/>
+<mapAttribute key="com.ti.ccstudio.debug.ui.displayFormats">
+<mapEntry key="Texas Instruments XDS100v2 USB Debug Probe_0/C28xx@##separator##@1" value="16-Bit Hex - TI Style"/>
+</mapAttribute>
 <listAttribute key="org.eclipse.debug.core.MAPPED_RESOURCE_PATHS">
 <listEntry value="/Piccollo2AMC"/>
 </listAttribute>

@@ -61,8 +61,8 @@
 // 80 000 cycles is 0.001 seconds
 #define CPU_CYCLES_PER_TICK 80000
 
-extern const Semaphore_Handle xDataAvailable = 0;
-extern const Semaphore_Handle yDataAvailable = 0;
+extern const Semaphore_Handle xDataAvailable;
+extern const Semaphore_Handle yDataAvailable;
 extern const Swi_Handle xVelProcSwi;
 extern const Swi_Handle yVelProcSwi;
 
@@ -77,18 +77,19 @@ static volatile int32_t yVel = 0;
 
 // updated every CPU_CYCLES_PER_TICK by feedback
 
+#define XVELOFFSET  50
 #define X_OUTPUT 0
 #define Y_OUTPUT 1
-#define Q_VALUE  16
+#define Q_VALUE 16
 
 #define ENCODERCALIB 90 // 360/2048 ticks per rotation represented in q9
 #define ENCODERCALIB_Q 9
-#define TACHOCALIB 357 // = .6975 Q9
+#define TACHOCALIB 714 // = .6975 Q9
 #define TACHOCALIB_Q 9 // = .6975 Q9
 #define VOLTAGECALIB_Q
 #define VOLTAGEOFFSET_Q
 
-static volatile int32_t voltage[2] = {2400, 1800}; // approximately 1V
+static volatile int32_t voltage[2] = {2048, 2048};
 
 // Updated whenever the draw task needs to
 static volatile int32_t xPosRef = 0;
@@ -127,7 +128,7 @@ Void xEncISR(Void)
 }
 
 // Pins assigned for yMotor are:
-// J6.1 = x and J6.2 = y
+// J6.3 = x and J6.4 = y
 Void yEncISR(Void)
 {
     yMask = (GpioDataRegs.GPADAT.bit.GPIO1 << 1) + GpioDataRegs.GPADAT.bit.GPIO0;
@@ -138,10 +139,6 @@ Void timerISR(Void){
     // Every step, output to the encoder
     static uint16_t xOrY = X_OUTPUT;
     AdcRegs.ADCSOCFRC1.all = 0x3;
-    // Output
-
-    //when motor not running, DAC outputs 0; which gets shifted to -10V
-    //so whenever a motor not running; the dac needs to be set to
     GpioDataRegs.GPATOGGLE.all = 0xC;
     xOrY ^= 1;
     SpiaRegs.SPITXBUF = voltage[xOrY];
@@ -149,20 +146,20 @@ Void timerISR(Void){
 
 }
 #define F_TAPS 8
-uint16_t xVelRaw[F_TAPS] = {0};
-uint16_t yVelRaw[F_TAPS] = {0};
+int16_t xVelRaw[F_TAPS] = {0};
+int16_t yVelRaw[F_TAPS] = {0};
 // these are moving average filters
 Void xVelISR (Void){
     static uint16_t i = 0;
     AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
     Swi_post(xVelProcSwi);
-    xVelRaw[i] = AdcResult.ADCRESULT0;
+    xVelRaw[i] = AdcResult.ADCRESULT0 - 2048 + XVELOFFSET;
     i = (i + 1) & 7;
 }
 
 Void xVelProcFxn(Void){
     int i;
-    uint32_t cVel = 0;
+    int32_t cVel = 0;
     for (i = 0; i < F_TAPS; i++)
         cVel += xVelRaw[i];
     xVel = ((cVel <<11) * TACHOCALIB);
@@ -180,7 +177,7 @@ Void yVelISR(Void){
 
 Void yVelProcFxn(Void){
     int i;
-    uint32_t cVel = 0;
+    int32_t cVel = -2048;
     for (i = 0; i < F_TAPS; i++)
         cVel += yVelRaw[i];
     yVel = ((cVel <<11) * TACHOCALIB);
@@ -192,36 +189,41 @@ Void yVelProcFxn(Void){
  * Process the implemented PID control loop SWI
  * triggers once every 0.001s
  */
-#define X_KD 96 // 0.188 in q9
-#define X_KP 286 // 0.559 in q9
+#define X_KD 123 // 0.00188 in q16
+#define X_KP 28 // 0.0559 in q9
+
+int32_t timerCount;
 Void xFeedbackControlFxn(Void)
 {
-    int32_t err;
+    int32_t cerr;
     while (1)
     {
-        Semaphore_pend(xDataAvailable, 10000);
-        // Process for xVoltage
-        err = xPosRef - xPos;
-        err = (err * X_KP)>>9;
-        err -= (X_KD * xVel)>>9;
-        err = err + 524288;
-        err = (err * 256)>>9;
-        voltage[X_OUTPUT] = err >> Q_VALUE;
-        //xVoltage = 2457; // approximately 1V
-        //GpioDataRegs.GPADAT.bit.GPIO0 = 1; //run xmotor
-        //SpiaRegs.SPIDAT = xVoltage;
+//        Semaphore_pend(xDataAvailable, 10000);
+          cerr = xPosRef - xPos;
+          cerr = ((cerr * X_KP)>>9) - ((X_KD * xVel)>>16);
+          cerr = (cerr * 256); // fix output scale
+          cerr = (cerr >> 16) + 2048; // fix output offset
+          voltage[X_OUTPUT] = cerr;//(err >> Q_VALUE);
     }
 }
 
-#define Y_KD 1
-#define Y_KP 1
+#define Y_KD 223 // 0.003412 in q16
+#define Y_KP 71 // 0.1395 in q9
 
 Void yFeedbackControlFxn(Void)
 {
+    //int32_t err;
     while (1)
     {
         //Semaphore_pend(yDataAvailable);
         // Process for yVoltage
+        //err = yPosRef - yPos;
+        //err = (err * Y_KP) >> 9;
+        //err -= (Y_KD * yVel) >> 16;
+        //err = err + 524288;
+        //err = (err * 256) >> 9;
+        //voltage[Y_OUTPUT] = err >> Q_VALUE;
+
     }
 }
 
