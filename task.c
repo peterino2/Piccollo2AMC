@@ -54,6 +54,7 @@
 #include <ti/sysbios/knl/Semaphore.h>
 #include <ti/sysbios/knl/Swi.h>
 #include "Library/Devinit.h"
+#include "plot_sidewind.h"
 #include "Library/DSP2802x_Device.h"
 
 
@@ -95,6 +96,7 @@ static volatile int32_t voltage[2] = {2048, 2048};
 // Updated whenever the draw task needs to
 static volatile int32_t xPosRef = 0;
 static volatile int32_t yPosRef = 0;
+static uint16_t plotting = 1;
 
 
 /*
@@ -104,7 +106,9 @@ static volatile int32_t yPosRef = 0;
 Int main()
 {
     DeviceInit();
-
+    uint32_t shiftval = -30;
+    xPos = shiftval << 16;
+    yPos = shiftval << 16;
     BIOS_start(); /* does not return */
     return (0);
 }
@@ -113,6 +117,10 @@ Int main()
 /* Backward, Stop, Forward*/
 // per tick in Q16 converted to 360 degrees per rotation
 int32_t directions[] = {11520, -11520, -11520, 11520};
+
+Void StepNextPointFxn(){
+
+}
 
 Void xEncISR(Void)
 {
@@ -148,7 +156,8 @@ int16_t yVelRaw[F_TAPS] = {0};
 Void xVelISR (Void){
     static uint16_t i = 0;
     AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
-    Swi_post(xVelProcSwi);
+    //if(plotting) // if swi is never posted then the PID function is permanently blocked
+        Swi_post(xVelProcSwi);
     xVelRaw[i] = AdcResult.ADCRESULT0 - 2048 + XVELOFFSET;
     i = (i + 1) & 7;
 }
@@ -166,7 +175,8 @@ Void xVelProcFxn(Void){
 Void yVelISR(Void){
     static uint16_t i = 0;
     AdcRegs.ADCINTFLGCLR.bit.ADCINT2 = 1;
-    Swi_post(yVelProcSwi);
+    //if(plotting)
+        Swi_post(yVelProcSwi);
     yVelRaw[i] = AdcResult.ADCRESULT1 - 2048 + YVELOFFSET;
     i = (i + 1) & 7;
 }
@@ -194,16 +204,16 @@ Void xFeedbackControlFxn(Void)
     while (1)
     {
         Semaphore_pend(xDataAvailable, BIOS_WAIT_FOREVER);
-          cerr = xPosRef - xPos;
-          cerr = ((cerr * X_KP)>>9) - ((X_KD * xVel)>>16);
-          cerr = (cerr * 256); // fix output scale
-          cerr = (cerr >> 16) + 2048; // fix output offset
-          voltage[X_OUTPUT] = cerr;//(err >> Q_VALUE);
+        cerr = xPosRef - xPos;
+        cerr = ((cerr * X_KP)>>9) - ((X_KD * xVel)>>16);
+        cerr = (cerr * 256); // fix output scale
+        cerr = (cerr >> 16) + 2048; // fix output offset
+        voltage[X_OUTPUT] = cerr;//(err >> Q_VALUE);
     }
 }
 
 #define Y_KD 223 // 0.003412 in q16
-#define Y_KP 71 // 0.1395 in q9
+#define Y_KP 76 // 0.148 in q9
 
 Void yFeedbackControlFxn(Void)
 {
@@ -220,11 +230,31 @@ Void yFeedbackControlFxn(Void)
     }
 }
 
+#ifdef __P2AMC_MODE_DEBUG
 static volatile uint32_t idleTicks = 0;
+#endif
+
+
+// triggers once every .10 seconds, steps voltage reference to the next position
+Void StepNextPointTriggerFxn(Void){
+
+    static uint16_t currentstep = 0;
+    if(plotting){
+        xPosRef = xPlots[currentstep] << 16;
+        yPosRef = yPlots[currentstep] << 16;
+        currentstep += 1;
+        plotting = currentstep < NVALS ? 1 : 0;
+    }
+}
+
 Void Idle(void)
 {
     while (1)
     {
+#ifdef __P2AMC_MODE_DEBUG
         idleTicks +=1;
+#endif
+        if(!plotting)
+            xPos; //  TODO enter into sleepmode here
     }
 }
