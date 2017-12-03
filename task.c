@@ -78,6 +78,7 @@ static volatile int32_t yVel = 0;
 // updated every CPU_CYCLES_PER_TICK by feedback
 
 #define XVELOFFSET  50
+#define YVELOFFSET (0-15)
 #define X_OUTPUT 0
 #define Y_OUTPUT 1
 #define Q_VALUE 16
@@ -95,7 +96,6 @@ static volatile int32_t voltage[2] = {2048, 2048};
 static volatile int32_t xPosRef = 0;
 static volatile int32_t yPosRef = 0;
 
-/* Counter incremented by Interrupt*/
 
 /*
  *  ======== main ========
@@ -103,8 +103,6 @@ static volatile int32_t yPosRef = 0;
 
 Int main()
 {
-    // Sample: Log_info0("Hello world\n");
-
     DeviceInit();
 
     BIOS_start(); /* does not return */
@@ -113,16 +111,12 @@ Int main()
 
 
 /* Backward, Stop, Forward*/
-// Pins assigned for xMotor are:
-// J
-
-#define ENCODER_DIRECTIONS 11520 // per tick in Q16 converted to 360 degrees per rotation
+// per tick in Q16 converted to 360 degrees per rotation
 int32_t directions[] = {11520, -11520, -11520, 11520};
-static uint16_t xMask;
-static uint16_t yMask;
+
 Void xEncISR(Void)
 {
-    // motor pins on 18 and 29
+    uint16_t xMask;
     xMask =  (GpioDataRegs.GPADAT.bit.GPIO5 << 1) + GpioDataRegs.GPADAT.bit.GPIO4;
     xPos += directions[xMask];
 }
@@ -131,10 +125,12 @@ Void xEncISR(Void)
 // J6.3 = x and J6.4 = y
 Void yEncISR(Void)
 {
+    uint16_t yMask;
     yMask = (GpioDataRegs.GPADAT.bit.GPIO1 << 1) + GpioDataRegs.GPADAT.bit.GPIO0;
     yPos += directions[yMask];
 }
 
+uint16_t timeElapsedms_5 = 0;
 Void timerISR(Void){
     // Every step, output to the encoder
     static uint16_t xOrY = X_OUTPUT;
@@ -142,7 +138,7 @@ Void timerISR(Void){
     GpioDataRegs.GPATOGGLE.all = 0xC;
     xOrY ^= 1;
     SpiaRegs.SPITXBUF = voltage[xOrY];
-
+    timeElapsedms_5 += 1;
 
 }
 #define F_TAPS 8
@@ -171,18 +167,18 @@ Void yVelISR(Void){
     static uint16_t i = 0;
     AdcRegs.ADCINTFLGCLR.bit.ADCINT2 = 1;
     Swi_post(yVelProcSwi);
-    yVelRaw[i] = AdcResult.ADCRESULT1;
+    yVelRaw[i] = AdcResult.ADCRESULT1 - 2048 + YVELOFFSET;
     i = (i + 1) & 7;
 }
 
 Void yVelProcFxn(Void){
     int i;
-    int32_t cVel = -2048;
+    int32_t cVel = 0;
     for (i = 0; i < F_TAPS; i++)
         cVel += yVelRaw[i];
     yVel = ((cVel <<11) * TACHOCALIB);
     yVel >>= TACHOCALIB_Q;
-   // Semaphore_post(yDataAvailable);
+    Semaphore_post(yDataAvailable);
 }
 /*
  *  ======== Feedback Control Function ========
@@ -190,15 +186,14 @@ Void yVelProcFxn(Void){
  * triggers once every 0.001s
  */
 #define X_KD 123 // 0.00188 in q16
-#define X_KP 28 // 0.0559 in q9
+#define X_KP 77 // 0.15 in q9
 
-int32_t timerCount;
 Void xFeedbackControlFxn(Void)
 {
     int32_t cerr;
     while (1)
     {
-//        Semaphore_pend(xDataAvailable, 10000);
+        Semaphore_pend(xDataAvailable, BIOS_WAIT_FOREVER);
           cerr = xPosRef - xPos;
           cerr = ((cerr * X_KP)>>9) - ((X_KD * xVel)>>16);
           cerr = (cerr * 256); // fix output scale
@@ -212,26 +207,24 @@ Void xFeedbackControlFxn(Void)
 
 Void yFeedbackControlFxn(Void)
 {
-    //int32_t err;
+    int32_t cerr;
     while (1)
     {
-        //Semaphore_pend(yDataAvailable);
-        // Process for yVoltage
-        //err = yPosRef - yPos;
-        //err = (err * Y_KP) >> 9;
-        //err -= (Y_KD * yVel) >> 16;
-        //err = err + 524288;
-        //err = (err * 256) >> 9;
-        //voltage[Y_OUTPUT] = err >> Q_VALUE;
+        Semaphore_pend(yDataAvailable, BIOS_WAIT_FOREVER);
+        cerr = yPosRef - yPos;
+        cerr = ((cerr * Y_KP)>>9) - ((Y_KD * xVel)>>16);
+        cerr = (cerr * 256); // fix output scale
+        cerr = (cerr >> 16) + 2048; // fix output offset
+        voltage[Y_OUTPUT] = cerr;//(err >> Q_VALUE);
 
     }
 }
 
-
+static volatile uint32_t idleTicks = 0;
 Void Idle(void)
 {
     while (1)
     {
-
+        idleTicks +=1;
     }
 }
