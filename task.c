@@ -98,6 +98,12 @@ static volatile int32_t xPosRef = 0;
 static volatile int32_t yPosRef = 0;
 static uint16_t plotting = 1;
 
+// Initial values
+#define XPOSINIT -30
+#define YPOSINIT -30
+#define XPOSREFINIT -30
+#define YPOSREFINIT -30
+#define PLOTINIT 0
 
 /*
  *  ======== main ========
@@ -109,6 +115,14 @@ Int main()
     uint32_t shiftval = -30;
     xPos = shiftval << 16;
     yPos = shiftval << 16;
+
+    //initial starting values
+    xPos = XPOSINIT;
+    xPosRef = XPOSREFINIT;
+    yPos = YPOSINIT;
+    yPos = YPOSREFINIT;
+    plotting = PLOTINIT;
+
     BIOS_start(); /* does not return */
     return (0);
 }
