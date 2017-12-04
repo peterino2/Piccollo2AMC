@@ -54,6 +54,7 @@
 #include <ti/sysbios/knl/Semaphore.h>
 #include <ti/sysbios/knl/Swi.h>
 #include "Library/Devinit.h"
+#include "plot_sidewind.h"
 #include "Library/DSP2802x_Device.h"
 
 
@@ -61,8 +62,8 @@
 // 80 000 cycles is 0.001 seconds
 #define CPU_CYCLES_PER_TICK 80000
 
-extern const Semaphore_Handle xDataAvailable = 0;
-extern const Semaphore_Handle yDataAvailable = 0;
+extern const Semaphore_Handle xDataAvailable;
+extern const Semaphore_Handle yDataAvailable;
 extern const Swi_Handle xVelProcSwi;
 extern const Swi_Handle yVelProcSwi;
 
@@ -77,15 +78,32 @@ static volatile int32_t yVel = 0;
 
 // updated every CPU_CYCLES_PER_TICK by feedback
 
+#define XVELOFFSET  50
+#define YVELOFFSET (0-15)
 #define X_OUTPUT 0
 #define Y_OUTPUT 1
-static volatile int32_t voltage[2] = {2400, 1800}; // approximately 1V
+#define Q_VALUE 16
+
+#define ENCODERCALIB 90 // 360/2048 ticks per rotation represented in q9
+#define ENCODERCALIB_Q 9
+#define TACHOCALIB 714 // = .6975 Q9
+#define TACHOCALIB_Q 9 // = .6975 Q9
+#define VOLTAGECALIB_Q
+#define VOLTAGEOFFSET_Q
+
+static volatile int32_t voltage[2] = {2048, 2048};
 
 // Updated whenever the draw task needs to
 static volatile int32_t xPosRef = 0;
 static volatile int32_t yPosRef = 0;
+static uint16_t plotting = 1;
 
-/* Counter incremented by Interrupt*/
+// Initial values
+#define XPOSINIT -30
+#define YPOSINIT -30
+#define XPOSREFINIT -30
+#define YPOSREFINIT -30
+#define PLOTINIT 0
 
 /*
  *  ======== main ========
@@ -93,9 +111,17 @@ static volatile int32_t yPosRef = 0;
 
 Int main()
 {
-    // Sample: Log_info0("Hello world\n");
-
     DeviceInit();
+    uint32_t shiftval = -30;
+    xPos = shiftval << 16;
+    yPos = shiftval << 16;
+
+    //initial starting values
+    xPos = XPOSINIT;
+    xPosRef = XPOSREFINIT;
+    yPos = YPOSINIT;
+    yPos = YPOSREFINIT;
+    plotting = PLOTINIT;
 
     BIOS_start(); /* does not return */
     return (0);
@@ -103,117 +129,146 @@ Int main()
 
 
 /* Backward, Stop, Forward*/
-// Pins assigned for xMotor are:
-// J
+// per tick in Q16 converted to 360 degrees per rotation
+int32_t directions[] = {11520, -11520, -11520, 11520};
 
-int16_t directions[] = {1, -1, -1, 1};
-static uint16_t xMask;
-static uint16_t yMask;
+Void StepNextPointFxn(){
+
+}
+
 Void xEncISR(Void)
 {
-    // motor pins on 18 and 29
+    uint16_t xMask;
     xMask =  (GpioDataRegs.GPADAT.bit.GPIO5 << 1) + GpioDataRegs.GPADAT.bit.GPIO4;
     xPos += directions[xMask];
 }
 
 // Pins assigned for yMotor are:
-// J6.1 = x and J6.2 = y
+// J6.3 = x and J6.4 = y
 Void yEncISR(Void)
 {
+    uint16_t yMask;
     yMask = (GpioDataRegs.GPADAT.bit.GPIO1 << 1) + GpioDataRegs.GPADAT.bit.GPIO0;
     yPos += directions[yMask];
 }
 
+uint16_t timeElapsedms_5 = 0;
 Void timerISR(Void){
     // Every step, output to the encoder
     static uint16_t xOrY = X_OUTPUT;
     AdcRegs.ADCSOCFRC1.all = 0x3;
-    // Output
-
-    //when motor not running, DAC outputs 0; which gets shifted to -10V
-    //so whenever a motor not running; the dac needs to be set to
     GpioDataRegs.GPATOGGLE.all = 0xC;
     xOrY ^= 1;
     SpiaRegs.SPITXBUF = voltage[xOrY];
-
+    timeElapsedms_5 += 1;
 
 }
 #define F_TAPS 8
-uint16_t xVelRaw[F_TAPS] = {0};
-uint16_t yVelRaw[F_TAPS] = {0};
+int16_t xVelRaw[F_TAPS] = {0};
+int16_t yVelRaw[F_TAPS] = {0};
 // these are moving average filters
 Void xVelISR (Void){
     static uint16_t i = 0;
     AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1;
-    Swi_post(xVelProcSwi);
-    xVelRaw[i] = AdcResult.ADCRESULT0;
-    i = (i + 1) & 0x7;
+    //if(plotting) // if swi is never posted then the PID function is permanently blocked
+        Swi_post(xVelProcSwi);
+    xVelRaw[i] = AdcResult.ADCRESULT0 - 2048 + XVELOFFSET;
+    i = (i + 1) & 7;
 }
 
 Void xVelProcFxn(Void){
     int i;
-    xVel = 0;
+    int32_t cVel = 0;
     for (i = 0; i < F_TAPS; i++)
-        xVel += xVelRaw[i];
-    xVel >>= 3;
+        cVel += xVelRaw[i];
+    xVel = ((cVel <<11) * TACHOCALIB);
+    xVel >>= TACHOCALIB_Q;
+    Semaphore_post(xDataAvailable);
 }
 
 Void yVelISR(Void){
     static uint16_t i = 0;
     AdcRegs.ADCINTFLGCLR.bit.ADCINT2 = 1;
-    Swi_post(yVelProcSwi);
-    yVelRaw[i] = AdcResult.ADCRESULT1;
-    i = (i + 1)&0x7;
+    //if(plotting)
+        Swi_post(yVelProcSwi);
+    yVelRaw[i] = AdcResult.ADCRESULT1 - 2048 + YVELOFFSET;
+    i = (i + 1) & 7;
 }
 
 Void yVelProcFxn(Void){
     int i;
-    yVel = 0;
+    int32_t cVel = 0;
     for (i = 0; i < F_TAPS; i++)
-        yVel += yVelRaw[i];
-    yVel >>= 3;
+        cVel += yVelRaw[i];
+    yVel = ((cVel <<11) * TACHOCALIB);
+    yVel >>= TACHOCALIB_Q;
+    Semaphore_post(yDataAvailable);
 }
 /*
  *  ======== Feedback Control Function ========
  * Process the implemented PID control loop SWI
  * triggers once every 0.001s
  */
-#define X_KD 1
-#define X_KP 1
-#define X_KI 1
+#define X_KD 123 // 0.00188 in q16
+#define X_KP 77 // 0.15 in q9
+
 Void xFeedbackControlFxn(Void)
 {
-    static int16_t integral;
+    int32_t cerr;
     while (1)
     {
-        //Semaphore_pend(xDataAvailable);
-        // Process for xVoltage
-
-        //xVoltage = 2457; // approximately 1V
-        //GpioDataRegs.GPADAT.bit.GPIO0 = 1; //run xmotor
-        //SpiaRegs.SPIDAT = xVoltage;
+        Semaphore_pend(xDataAvailable, BIOS_WAIT_FOREVER);
+        cerr = xPosRef - xPos;
+        cerr = ((cerr * X_KP)>>9) - ((X_KD * xVel)>>16);
+        cerr = (cerr * 256); // fix output scale
+        cerr = (cerr >> 16) + 2048; // fix output offset
+        voltage[X_OUTPUT] = cerr;//(err >> Q_VALUE);
     }
 }
 
-#define Y_KD 1
-#define Y_KP 1
-#define Y_KI 1
+#define Y_KD 223 // 0.003412 in q16
+#define Y_KP 76 // 0.148 in q9
 
 Void yFeedbackControlFxn(Void)
 {
-    static int16_t integral;
+    int32_t cerr;
     while (1)
     {
-        //Semaphore_pend(yDataAvailable);
-        // Process for yVoltage
+        Semaphore_pend(yDataAvailable, BIOS_WAIT_FOREVER);
+        cerr = yPosRef - yPos;
+        cerr = ((cerr * Y_KP)>>9) - ((Y_KD * xVel)>>16);
+        cerr = (cerr * 256); // fix output scale
+        cerr = (cerr >> 16) + 2048; // fix output offset
+        voltage[Y_OUTPUT] = cerr;//(err >> Q_VALUE);
+
     }
 }
 
+#ifdef __P2AMC_MODE_DEBUG
+static volatile uint32_t idleTicks = 0;
+#endif
+
+
+// triggers once every .10 seconds, steps voltage reference to the next position
+Void StepNextPointTriggerFxn(Void){
+
+    static uint16_t currentstep = 0;
+    if(plotting){
+        xPosRef = xPlots[currentstep] << 16;
+        yPosRef = yPlots[currentstep] << 16;
+        currentstep += 1;
+        plotting = currentstep < NVALS ? 1 : 0;
+    }
+}
 
 Void Idle(void)
 {
     while (1)
     {
-
+#ifdef __P2AMC_MODE_DEBUG
+        idleTicks +=1;
+#endif
+        if(!plotting)
+            xPos; //  TODO enter into sleepmode here
     }
 }
