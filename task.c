@@ -54,7 +54,7 @@
 #include <ti/sysbios/knl/Semaphore.h>
 #include <ti/sysbios/knl/Swi.h>
 #include "Library/Devinit.h"
-#include "plot_sidewind.h"
+#include "christmas_tree.h"
 #include "Library/DSP2802x_Device.h"
 
 
@@ -209,8 +209,10 @@ Void yVelProcFxn(Void){
  * Process the implemented PID control loop SWI
  * triggers once every 0.001s
  */
+// 77
 #define X_KD 123 // 0.00188 in q16
-#define X_KP 77 // 0.15 in q9
+//#define X_KP 140 // 0.15 in q9
+uint32_t X_KP = 140;
 
 Void xFeedbackControlFxn(Void)
 {
@@ -226,9 +228,11 @@ Void xFeedbackControlFxn(Void)
     }
 }
 
+//223
+// 66
 #define Y_KD 223 // 0.003412 in q16
-#define Y_KP 76 // 0.148 in q9
-
+//#define Y_KP 120 // 0.148 in q9
+uint32_t Y_KP = 120;
 Void yFeedbackControlFxn(Void)
 {
     int32_t cerr;
@@ -250,14 +254,39 @@ static volatile uint32_t idleTicks = 0;
 
 
 // triggers once every .10 seconds, steps voltage reference to the next position
-Void StepNextPointTriggerFxn(Void){
+int32_t xDiff,yDiff;
+static uint16_t currentstep = 0;
+int32_t maxStep = 0x00014000;
 
-    static uint16_t currentstep = 0;
+Void StepNextPointTriggerFxn(Void){
+    uint32_t xAtRef = 0;
+    uint32_t yAtRef = 0;
+    int32_t absDiff = 0;
+
     if(plotting){
-        xPosRef = xPlots[currentstep] << 16;
-        yPosRef = yPlots[currentstep] << 16;
-        currentstep += 1;
+        xDiff = ((xPlots[currentstep] << 16) - xPosRef );
+        absDiff = (xDiff >= 0) ? xDiff: -xDiff;
+        if( absDiff > maxStep ){
+            xPosRef += (xDiff >= 0)? maxStep: -maxStep;
+        }
+        else {
+            xAtRef = 1;
+            xPosRef = xPlots[currentstep] << 16;
+        }
+
+        yDiff = ( (yPlots[currentstep] << 16) - yPosRef );
+        absDiff = (yDiff >= 0) ? yDiff: -yDiff;
+        if( absDiff > maxStep ){
+            yPosRef += (yDiff >= 0)? maxStep: -maxStep;
+        }
+        else {
+            yAtRef = 1;
+            yPosRef = yPlots[currentstep] << 16;
+        }
+        currentstep += xAtRef && yAtRef;
         plotting = currentstep < NVALS ? 1 : 0;
+    }else{
+        currentstep = 0;
     }
 }
 
