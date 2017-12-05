@@ -249,6 +249,26 @@ void DeviceInit(void)
 
     GpioDataRegs.GPACLEAR.bit.GPIO0 = 1; // sets gpio to 0 synchronously
     GpioDataRegs.GPASET.bit.GPIO1 = 1; // sets gpio to 1 synchronously
+
+    //of code executed from Flash.
+    FlashRegs.FOPT.bit.ENPIPE = 1;
+    // CAUTION
+    //Minimum waitstates required for the flash operating
+    //at a given CPU rate must be characterized by TI.
+    //Refer to the datasheet for the latest information.
+    //Set the Paged Waitstate for the Flash
+    FlashRegs.FBANKWAIT.bit.PAGEWAIT = 3;
+    //Set the Random Waitstate for the Flash
+    FlashRegs.FBANKWAIT.bit.RANDWAIT = 3;
+    //Set the Waitstate for the OTP
+    FlashRegs.FOTPWAIT.bit.OTPWAIT = 5;
+    // CAUTION
+    //ONLY THE DEFAULT VALUE FOR THESE 2 REGISTERS SHOULD BE USED
+    FlashRegs.FSTDBYWAIT.bit.STDBYWAIT = 0x01FF;
+    FlashRegs.FACTIVEWAIT.bit.ACTIVEWAIT = 0x01FF;
+    //Force a pipeline flush to ensure that the write to
+    asm(" RPT #7 || NOP");
+    //the last register configured occurs before returning.
 	EDIS;	// Disable register access
 }
 
