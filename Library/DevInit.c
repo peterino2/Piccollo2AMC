@@ -1,18 +1,21 @@
 //============================================================================
 //============================================================================
 //
-// FILE:	ELEX7820-Lab5-CCSv4-DevInit.c
+// FILE:    ELEX7820-Lab5-CCSv4-DevInit.c
 //
-// TITLE:	Device initialization for F2802x series
+// TITLE:   Device initialization for F2802x series
 // 
-// Version:	1.0 	
+// Version: 1.0
 //
-// Date: 	27 Aug 09 	BRL
+// Date:    2017 11 27
 //
-// Modified by: DNR 14May2012 for use with SYS/BIOS
+// Modified by: Peter Li and Lulu Li for use with:
 //
+// - CCSV 7.2
+// - XDC tools 100v2 ver 3.25.03.72
+// - SysBios ver 6.35.04.50
+// - TI compiler Ver 6.2.11
 //
-//============================================================================
 //============================================================================
 
 #include "DSP2802x_Device.h"
@@ -197,11 +200,20 @@ void DeviceInit(void)
 	GpioDataRegs.GPBSET.bit.GPIO34 = 1;		// uncomment if --> Set High initially
 //--------------------------------------------------------------------------------------
 
-	/*
-	 * Uses Encoder channel A as the trigger
-	 *
-	 * xEnc on xint1 and yEnc on xint2
-	 * */
+    /*
+    * GPIO Pins that are configured here are
+    * - GPIO0 and GPIO1 as yEncoder Channel A and B
+    * - GPIO3 and GPIO4 as xEncoder Channel A and B
+    * - GPIO2 and GPIO3 as x and y DAC chip select
+    * - GPIO12 as the pushbutton for starting the demo
+    * */
+
+    /* LL
+    * Uses Encoder channel A as the trigger
+    *
+    * xEnc on xint1 and yEnc on xint2
+    *
+    * */
 	XIntruptRegs.XINT1CR.bit.ENABLE = 1;
 	XIntruptRegs.XINT2CR.bit.ENABLE = 1;
 	XIntruptRegs.XINT1CR.bit.POLARITY = 3;
@@ -209,9 +221,13 @@ void DeviceInit(void)
 
 	GpioIntRegs.GPIOXINT1SEL.bit.GPIOSEL = 5; // X motor encoder interrupt
 	GpioIntRegs.GPIOXINT2SEL.bit.GPIOSEL = 0; // Y motor encoder interrupt
+
+	// Sets initial conditions for chip select
     GpioDataRegs.GPASET.bit.GPIO3 = 1; // sets gpio to 1 synchronously
     GpioDataRegs.GPACLEAR.bit.GPIO2 = 1; // sets gpio to 0 synchronously
 
+
+    // Enable ADC conversions to read from ADCIN0 and ADCIN1
 	AdcRegs.ADCCTL1.bit.ADCPWDN = 1;
 	AdcRegs.ADCCTL1.bit.ADCREFPWD = 1;
 	AdcRegs.ADCCTL1.bit.ADCBGPWD = 1;
@@ -244,13 +260,15 @@ void DeviceInit(void)
 
     SpiaRegs.SPICCR.bit.SPISWRESET = 1;
 
+    // Enable PIE control registers
     PieCtrlRegs.PIEIER1.bit.INTx4 = 1;
     PieCtrlRegs.PIECTRL.bit.ENPIE = 1;
 
     GpioDataRegs.GPACLEAR.bit.GPIO0 = 1; // sets gpio to 0 synchronously
     GpioDataRegs.GPASET.bit.GPIO1 = 1; // sets gpio to 1 synchronously
 
-    //of code executed from Flash.
+
+    // Change flash wait states to enable faster reading from flash
     FlashRegs.FOPT.bit.ENPIPE = 1;
     // CAUTION
     //Minimum waitstates required for the flash operating
@@ -258,10 +276,13 @@ void DeviceInit(void)
     //Refer to the datasheet for the latest information.
     //Set the Paged Waitstate for the Flash
     FlashRegs.FBANKWAIT.bit.PAGEWAIT = 3;
+
     //Set the Random Waitstate for the Flash
     FlashRegs.FBANKWAIT.bit.RANDWAIT = 3;
+
     //Set the Waitstate for the OTP
     FlashRegs.FOTPWAIT.bit.OTPWAIT = 5;
+
     // CAUTION
     //ONLY THE DEFAULT VALUE FOR THESE 2 REGISTERS SHOULD BE USED
     FlashRegs.FSTDBYWAIT.bit.STDBYWAIT = 0x01FF;
@@ -269,18 +290,11 @@ void DeviceInit(void)
     //Force a pipeline flush to ensure that the write to
     asm(" RPT #7 || NOP");
     //the last register configured occurs before returning.
+
+
 	EDIS;	// Disable register access
 }
 
 //===========================================================================
 // End of file.
 //===========================================================================
-
-
-
-
-
-
-
-
-
