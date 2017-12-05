@@ -7,7 +7,7 @@
  *
  *  Objectives of this project are:
  *
- *  1) To use the adc and the sample encoder and tachometer values.
+ *  1) To use the ADC and the sample encoder and tachometer values.
  *  Do this for each of the Quanser SRV02 motors that is provided for this course
  *
  *  2) To implement a proportional with rate feedback controller to control the position
@@ -20,7 +20,7 @@
  *  Usage:
  *
  *      1. Set the arms such that both arms at a rotation of 0 degrees
- *      2. Press the button associated with GPIO12
+ *      2. Set "plotting" variable to "1" in the debugger to start the demonstration
  *
  *  (Optional) Compile with __P2AMC_MODE_DEBUG defined in order to enable debug mode
  *  This prevents the motor from entering sleeping and instead allows the controller
@@ -40,6 +40,7 @@
 #include "Library/DSP2802x_Device.h"
 
 #define __P2AMC_MODE_DEBUG // uncomment to enable debug mode
+//#define __P2AMC_MODE_DEBUG_AT_START // uncomment to immediately begin pid loop for profiling CPU cycles
 
 // load the demo file here
 // demo file must include
@@ -53,20 +54,24 @@
 
 // ---- Rtos Externs ----
 
-extern const Swi_Handle xVelProcSwi; // Posted by xVelISR
-extern const Swi_Handle yVelProcSwi; // Posted by yVelISR
+extern const Swi_Handle xVelProcSwi; // Posted by xVelISR -PL
+extern const Swi_Handle yVelProcSwi; // Posted by yVelISR -PL
 
-extern const Semaphore_Handle xDataAvailable; // Posted upon completion of xVelProcSwi
-extern const Semaphore_Handle yDataAvailable; // Posted upon completion of yVelProcSwi
+extern const Semaphore_Handle xDataAvailable; // Posted upon completion of xVelProcSwi -PL
+extern const Semaphore_Handle yDataAvailable; // Posted upon completion of yVelProcSwi -PL
 
 
 // ---- Program State Machines ----
 
+#ifndef __P2AMC_MODE_DEBUG_AT_START
+static uint32_t plotting = 0; // LL
+#endif __P2AMC_MODE_DEBUG_AT_START
 
-static enum{
-    stopped, plotting
-} state = stopped;
+#ifdef __P2AMC_MODE_DEBUG_AT_START
+static uint32_t plotting = 1; // LL
+#endif
 
+//LL
 typedef enum {
     out_x, out_y
 } Outputs;
@@ -82,35 +87,35 @@ typedef enum {
 
 // per tick in Q16 converted to 360 degrees per rotation
 // This is used with the GPIO read bits as a lookup table
-static const int32_t directions[] = {11520, -11520, -11520, 11520};
+static const int32_t directions[] = {11520, -11520, -11520, 11520}; //PL
 
-#define ENCODERCALIB 90 // 360/2048 ticks per rotation represented in q9
-#define ENCODERCALIB_Q 9
+#define ENCODERCALIB 90 // 360/2048 ticks per rotation represented in q9 //PL
+#define ENCODERCALIB_Q 9 //PL
 
 // -- ADC and DAC Constants --
 // This is a single value that represents the conversion gain from raw adc
 // units to degrees per second coming from the tachometer
-#define TACHOCALIB 714 // = 0.6975 in Q9
-#define TACHOCALIB_Q 9 // Q Value for the calibration constant
+#define TACHOCALIB 714 // = 0.6975 in Q9 -PL
+#define TACHOCALIB_Q 9 // Q Value for the calibration constant -PL
 
 
 // The tachometers have an error that cause them to output an offset
 // voltage when no movement is happening.
 // These constants should be added to the ADC value to correct for these errors
 
-#define XVELOFFSET  50      // X adc offset
-#define YVELOFFSET (0-15)   // Y adc offset
+#define XVELOFFSET  50      // X adc offset -PL
+#define YVELOFFSET (0-15)   // Y adc offset -PL
 
 // This is the ADC mid point, our level shifting circuit shifts 0v as
 // 1.65 volts which the ADC represents as 2048
-#define ADCMIDPOINT 2048
+#define ADCMIDPOINT 2048 // LL
 
 // This is the DAC mid point, our level shifting circuit shifts 1.65v as
 // 0v which our DAC requires a digital read value of 2048
-#define DACMIDPOINT 2048
+#define DACMIDPOINT 2048 // LL
 
 
-// ---- Controller Constants ----
+// ---- Controller Constants ---- LL
 
 #define X_KD 123    // 0.00188 in q16
 #define X_KD_Q 16   // Q value for X_KD calculations
@@ -133,30 +138,36 @@ static const int32_t directions[] = {11520, -11520, -11520, 11520};
 // These will be updated at any rising or falling edge on any of the
 // Four encoder variables
 // stored in degrees with a Q value of Q_VALUE
+// PL
 static volatile int32_t xPos = 0;
 static volatile int32_t yPos = 0;
 
 // Updated by nVelProcFxn Swi, result of a moving average filter
+// PL
 static volatile int32_t xVel = 0; // X velocity
 static volatile int32_t yVel = 0; // Y velocity
 
 // Finite impulse response filter definition
+// PL
 #define F_TAPS 8                // Must be a power of 2
 #define F_TAPS_Q 4              // Equivalent Q value of summing the taps
 #define F_INDX_MASK (F_TAPS-1)   // Filter Bit mask
 
 // Updated by xVelISR
 // Circular buffers for calculating x and y velocity
+// PL
 static int16_t xVelRaw[F_TAPS] = {0};
 static int16_t yVelRaw[F_TAPS] = {0};
 
 // Updated whenever the draw task needs to
+// PL
 static volatile int32_t xPosRef = 0; // x motor Reference position
 static volatile int32_t yPosRef = 0; // y motor Reference Position
 
 
 // ---- SPI output buffers ----
 // Output buffers for the x and y voltages
+// LL
 static volatile int32_t voltage[2] = {DACMIDPOINT, DACMIDPOINT};
 
 
@@ -193,6 +204,7 @@ Int main()
  * */
 
 // Triggered by XINT1, a GPIO interrupt pulsed for both rising and falling edge
+// PL
 Void xEncISR(Void)
 {
     // Generate an index
@@ -204,6 +216,7 @@ Void xEncISR(Void)
 }
 
 // Triggered by XINT1, a GPIO interrupt pulsed for both rising and falling edge
+// PL
 Void yEncISR(Void)
 {
 
@@ -228,18 +241,21 @@ Void yEncISR(Void)
  *
  * */
 
+// PL
 #ifdef __P2AMC_MODE_DEBUG
 uint16_t timeElapsedms = 0; // used in debug mode to count time elapsed
 #endif
 
+//LL
 Void pidStepISR(Void){
     // Every step, output to the encoder
     static Outputs xOrY = out_x;
-    AdcRegs.ADCSOCFRC1.all = 0x3;       // Start both pid loops
-    GpioDataRegs.GPATOGGLE.all = 0xC;   // Toggle the two GPIO 3 and 4
-    xOrY ^= 1;                          // toggle which buffer we are transmitting
-    SpiaRegs.SPITXBUF = voltage[xOrY];  // Output corresponding buffer for the adc
-
+    if(plotting){
+        AdcRegs.ADCSOCFRC1.all = 0x3;       // Start both pid loops
+        GpioDataRegs.GPATOGGLE.all = 0xC;   // Toggle the two GPIO 3 and 4
+        xOrY ^= 1;                          // toggle which buffer we are transmitting
+        SpiaRegs.SPITXBUF = voltage[xOrY];  // Output corresponding buffer for the adc
+    }
 #ifdef __P2AMC_MODE_DEBUG
     timeElapsedms += 1; // increment the time elapsed for use time profiling
 #endif
@@ -258,11 +274,11 @@ Void pidStepISR(Void){
  *
  * */
 
+//PL
 Void xVelISR (Void){
     static uint16_t i = 0;
     AdcRegs.ADCINTFLGCLR.bit.ADCINT1 = 1; // Clear flags
-    if(state == plotting)
-        Swi_post(xVelProcSwi);
+    Swi_post(xVelProcSwi);
     // Get adc result and mask the index for the circular buffer
     xVelRaw[i] = AdcResult.ADCRESULT0 - ADCMIDPOINT + XVELOFFSET;
     i = (i + 1) & F_INDX_MASK;
@@ -280,12 +296,11 @@ Void xVelISR (Void){
  *
  * */
 
+//PL
 Void yVelISR(Void){
     static uint16_t i = 0;
     AdcRegs.ADCINTFLGCLR.bit.ADCINT2 = 1; // Clear flags
-    if(state == plotting)
-        Swi_post(yVelProcSwi);
-
+    Swi_post(yVelProcSwi);
     // Get adc result and mask the index for the circular buffer
     yVelRaw[i] = AdcResult.ADCRESULT1 - ADCMIDPOINT + YVELOFFSET;
     i = (i + 1) & F_INDX_MASK;
@@ -298,6 +313,7 @@ Void yVelISR(Void){
  * value in degrees per second
  * */
 
+//PL
 Void xVelProcFxn(Void){
     int i;
     int32_t cVel = 0;
@@ -324,6 +340,8 @@ Void xVelProcFxn(Void){
  * value in degrees per second
  * */
 
+
+//PL
 Void yVelProcFxn(Void){
     int i;
     int32_t cVel = 0;
@@ -341,7 +359,7 @@ Void yVelProcFxn(Void){
     Semaphore_post(yDataAvailable);
 }
 /*
- *  ======== Feedback Control Function ========
+ *                        ======== Feedback Control Function ========
  * Process the implemented PID control loop SWI
  * triggers once every 0.001s
  *
@@ -361,6 +379,7 @@ Void yVelProcFxn(Void){
  *
  */
 
+// LL
 Void xFeedbackControlFxn(Void)
 {
     int32_t cerr;
@@ -376,6 +395,7 @@ Void xFeedbackControlFxn(Void)
     }
 }
 
+// LL
 Void yFeedbackControlFxn(Void)
 {
     int32_t cerr;
@@ -392,6 +412,7 @@ Void yFeedbackControlFxn(Void)
     }
 }
 
+//PL
 #ifdef __P2AMC_MODE_DEBUG
 static volatile uint32_t idleTicks = 0;
 #endif
@@ -410,16 +431,17 @@ static volatile uint32_t idleTicks = 0;
  * This function breaks large steps into a series of smooth ramp values
  * */
 
+// PL did  this section below
 int32_t xDiff,yDiff; // How far we are from our desired position
 static uint16_t currentstep = 0; // The vertex in x and y Plots we are moving to
-const int32_t maxStep = 0x30000; // The max size of each discrete step
+const int32_t maxStep = 0x18000; // The max size of each discrete step
 
 Void StepNextPointTriggerFxn(Void){
     uint32_t xAtRef = 0;    // have we arrived at our x vertex yet?
     uint32_t yAtRef = 0;    // have we arrived at our y vertex yet?
     int32_t absDiff = 0;    // comparison variable for the absolute value
 
-    if(state){
+    if(plotting){
         // Compare our current reference to the desired vertex position
         xDiff = ((xPlots[currentstep] << Q_VALUE) - xPosRef );
 
@@ -458,10 +480,11 @@ Void StepNextPointTriggerFxn(Void){
         currentstep += xAtRef && yAtRef;
 
         // Stop the plotting and pid loops if we have reached the end of our path
-        state = currentstep < NVALS ? plotting : stopped;
+        plotting = currentstep < NVALS ? 1 : 0;
     }
 }
 
+// PL
 Void Idle(void)
 {
     while (1)
