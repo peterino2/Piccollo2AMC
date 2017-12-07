@@ -65,7 +65,7 @@ extern const Semaphore_Handle yDataAvailable; // Posted upon completion of yVelP
 
 #ifndef __P2AMC_MODE_DEBUG_AT_START
 static uint32_t plotting = 0; // LL
-#endif __P2AMC_MODE_DEBUG_AT_START
+#endif
 
 #ifdef __P2AMC_MODE_DEBUG_AT_START
 static uint32_t plotting = 1; // LL
@@ -250,12 +250,12 @@ uint16_t timeElapsedms = 0; // used in debug mode to count time elapsed
 Void pidStepISR(Void){
     // Every step, output to the encoder
     static Outputs xOrY = out_x;
-    if(plotting){
+    //if(plotting)
         AdcRegs.ADCSOCFRC1.all = 0x3;       // Start both pid loops
-        GpioDataRegs.GPATOGGLE.all = 0xC;   // Toggle the two GPIO 3 and 4
-        xOrY ^= 1;                          // toggle which buffer we are transmitting
-        SpiaRegs.SPITXBUF = voltage[xOrY];  // Output corresponding buffer for the adc
-    }
+    GpioDataRegs.GPATOGGLE.all = 0xC;   // Toggle the two GPIO 3 and 4
+    xOrY ^= 1;                          // toggle which buffer we are transmitting
+    SpiaRegs.SPITXBUF = voltage[xOrY];  // Output corresponding buffer for the adc
+
 #ifdef __P2AMC_MODE_DEBUG
     timeElapsedms += 1; // increment the time elapsed for use time profiling
 #endif
@@ -434,7 +434,7 @@ static volatile uint32_t idleTicks = 0;
 // PL did  this section below
 int32_t xDiff,yDiff; // How far we are from our desired position
 static uint16_t currentstep = 0; // The vertex in x and y Plots we are moving to
-const int32_t maxStep = 0x18000; // The max size of each discrete step
+const int32_t maxStep = 0x10000; // The max size of each discrete step
 
 Void StepNextPointTriggerFxn(Void){
     uint32_t xAtRef = 0;    // have we arrived at our x vertex yet?
